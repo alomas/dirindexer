@@ -27,11 +27,14 @@ int getDirectory(const char *rootdir, int depth)
                 {
                     cout << "(D)";
                     for (int f=0; f<depth; f++)
-                        cout << "\t";
+                        cout << ".\t";
                     char *newpath;
                     newpath = new char(strlen(entry->d_name) + strlen(rootdir) + 1 );
                     ostringstream oss;
-                    oss << rootdir << "/" << entry->d_name;
+                    oss << rootdir;
+                    if (strcmp(rootdir, "/"))
+                        oss << "/";
+                    oss << entry->d_name;
 
                     cout <<  entry->d_name << endl;
                     getDirectory(oss.str().c_str(), depth);
@@ -39,15 +42,10 @@ int getDirectory(const char *rootdir, int depth)
                 else
                 {
                     for (int f=0; f<(depth+1); f++)
-                        cout << "\t";
+                        cout << ".\t";
                     cout << entry->d_name << endl;
                 }
             }
-            else
-            {
-                cout << "Ignoring " << entry->d_name  << endl;
-            }
-
         }
         closedir(dir);
     }
