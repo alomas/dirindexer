@@ -1,6 +1,7 @@
 #include <iostream>
 #include <dirent.h>
 #include <sstream>
+#include <cstring>
 
 using namespace std;
 
