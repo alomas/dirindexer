@@ -14,6 +14,20 @@ struct filedata {
     int filesize;
 };
 
+std::fstream out;
+
+std::ostream& operator << (std::ostream& os, const filedata fileobject)
+{
+    return os << fileobject.fullpath << endl << fileobject.filename << endl;
+}
+
+std::istream& operator >> (std::istream& os, filedata& fileobject)
+{
+    os >> fileobject.fullpath;
+    os >> fileobject.filename;
+    return os;
+}
+
 int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap)
 {
     struct dirent *entry;
@@ -60,6 +74,12 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                     for (int f=0; f<(depth+1); f++)
                         cout << ".\t";
                     cout << entry->d_name << endl;
+                    fileobject.fullpath = oss.str();
+                    if (out.is_open())
+                    {
+                        out << fileobject;
+                        //out.close();
+                    }
                 }
             }
         }
@@ -67,17 +87,6 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
     }
 }
 
-std::ostream& operator << (std::ostream& os, const filedata fileobject)
-{
-    return os << fileobject.filename << fileobject.fullpath;
-}
-
-std::istream& operator >> (std::istream& os, filedata& fileobject)
-{
-    os >> fileobject.filename;
-    os >> fileobject.fullpath;
-    return os;
-}
 
 int main(int argc, char *argv[]) {
     struct dirent *entry;
@@ -91,6 +100,7 @@ int main(int argc, char *argv[]) {
     {
         rootdir = argv[1];
     }
+    out.open("object.txt", std::ios::out );
     getDirectory(rootdir, 0, filemap);
     cout << "Number of elements for (" << rootdir << ") : " << filemap->size() << endl;
 
@@ -99,7 +109,7 @@ int main(int argc, char *argv[]) {
     std::map<string,filedata>::iterator it=filemap->begin();
     outdata = (filedata)(it->second);
 
-    std::fstream out("object.txt", std::ios::out);
+
     if (out.is_open())
     {
         out << outdata;
