@@ -56,7 +56,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                         cout << ".\t";
                     ostringstream oss;
                     oss << rootdir;
-                    if (strcmp(rootdir, "/"))
+                    if (rootdir[strlen(rootdir)] != '/')
                         oss << "/";
                     oss << entry->d_name;
 
@@ -67,7 +67,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                 {
                     ostringstream oss;
                     oss << rootdir;
-                    if (strcmp(rootdir, "/"))
+                    if (rootdir[strlen(rootdir)] != '/')
                         oss << "/";
                     oss << entry->d_name;
                     filemap->insert(std::make_pair(oss.str(), fileobject));
