@@ -4,10 +4,17 @@
 #include <cstring>
 #include <map>
 #include <iterator>
+#include <fstream>
 
 using namespace std;
 
-int getDirectory(const char *rootdir, int depth, std::map<string, string> *filemap)
+struct filedata {
+    string filename;
+    string fullpath;
+    int filesize;
+};
+
+int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap)
 {
     struct dirent *entry;
     DIR *dir;
@@ -23,6 +30,9 @@ int getDirectory(const char *rootdir, int depth, std::map<string, string> *filem
     {
         while ((entry = readdir(dir)))
         {
+            filedata fileobject;
+            fileobject.filename = entry->d_name;
+            fileobject.fullpath = rootdir;
             if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
             {
                 if (entry->d_type & DT_DIR)
@@ -30,8 +40,6 @@ int getDirectory(const char *rootdir, int depth, std::map<string, string> *filem
                     cout << "(D)";
                     for (int f=0; f<depth; f++)
                         cout << ".\t";
-                    char *newpath;
-                    newpath = new char(strlen(entry->d_name) + strlen(rootdir) + 1 );
                     ostringstream oss;
                     oss << rootdir;
                     if (strcmp(rootdir, "/"))
@@ -48,7 +56,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, string> *filem
                     if (strcmp(rootdir, "/"))
                         oss << "/";
                     oss << entry->d_name;
-                    filemap->insert(std::make_pair(oss.str(), entry->d_name));
+                    filemap->insert(std::make_pair(oss.str(), fileobject));
                     for (int f=0; f<(depth+1); f++)
                         cout << ".\t";
                     cout << entry->d_name << endl;
@@ -58,12 +66,25 @@ int getDirectory(const char *rootdir, int depth, std::map<string, string> *filem
         closedir(dir);
     }
 }
+
+std::ostream& operator << (std::ostream& os, const filedata fileobject)
+{
+    return os << fileobject.filename << fileobject.fullpath;
+}
+
+std::istream& operator >> (std::istream& os, filedata& fileobject)
+{
+    os >> fileobject.filename;
+    os >> fileobject.fullpath;
+    return os;
+}
+
 int main(int argc, char *argv[]) {
     struct dirent *entry;
     DIR *dir;
     const char *rootdir;
-    std::map<std::string, std::string> *filemap;
-    filemap = new std::map<string, string>;
+    std::map<std::string, filedata> *filemap;
+    filemap = new std::map<string, filedata>;
 
     std::cout << "DirIndexer v0.01α" << std::endl;
     if (argc > 1)
@@ -72,6 +93,24 @@ int main(int argc, char *argv[]) {
     }
     getDirectory(rootdir, 0, filemap);
     cout << "Number of elements for (" << rootdir << ") : " << filemap->size() << endl;
+
+    filedata indata;
+    filedata outdata;
+    std::map<string,filedata>::iterator it=filemap->begin();
+    outdata = (filedata)(it->second);
+
+    std::fstream out("object.txt", std::ios::out);
+    if (out.is_open())
+    {
+        out << outdata;
+        out.close();
+    }
+    std::fstream in("object.txt", std::ios::in);
+    if (in.is_open())
+    {
+        in >> indata;
+        in.close();
+    }
     filemap->clear();
     if (filemap)
     {
