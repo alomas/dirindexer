@@ -72,5 +72,11 @@ int main(int argc, char *argv[]) {
     }
     getDirectory(rootdir, 0, filemap);
     cout << "Number of elements for (" << rootdir << ") : " << filemap->size() << endl;
+    filemap->clear();
+    if (filemap)
+    {
+        delete(filemap);
+        filemap = NULL;
+    }
     return 0;
 }
