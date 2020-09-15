@@ -100,7 +100,10 @@ int main(int argc, char *argv[]) {
     {
         rootdir = argv[1];
     }
-    out.open("object.txt", std::ios::out );
+    if (argc > 2)
+        out.open(argv[2], std::ios::out);
+    else
+        out.open("object.txt", std::ios::out );
     getDirectory(rootdir, 0, filemap);
     cout << "Number of elements for (" << rootdir << ") : " << filemap->size() << endl;
 
