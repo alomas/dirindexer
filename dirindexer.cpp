@@ -11,14 +11,14 @@ using namespace std;
 struct filedata {
     string filename;
     string fullpath;
-    int filesize;
+    unsigned long filesize;
 };
 
 std::fstream out, in;
 
 std::ostream& operator << (std::ostream& os, const filedata fileobject)
 {
-    return os << fileobject.fullpath << endl << fileobject.filename << endl;
+    return os << fileobject.fullpath << endl << fileobject.filename << endl << fileobject.filesize << endl;
 }
 
 std::istream& operator >> (std::istream& os, filedata& fileobject)
@@ -26,6 +26,11 @@ std::istream& operator >> (std::istream& os, filedata& fileobject)
 
     std::getline( os,  fileobject.fullpath);
     std::getline( os , fileobject.filename);
+    string filesizestr;
+    std::getline( os , filesizestr);
+    if (!(filesizestr.empty()))
+        fileobject.filesize = std::stol(filesizestr);
+
     return os;
 }
 int loadTree(std::map<string, filedata> *filemap)
@@ -86,6 +91,12 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                     oss << entry->d_name;
                     filemap->insert(std::make_pair(oss.str(), fileobject));
                     fileobject.fullpath = oss.str();
+                    unsigned long filesize;
+                    std::ifstream file(fileobject.fullpath);
+                    file.seekg (0, file.end);
+                    unsigned long length = file.tellg();
+                    file.close();
+                    fileobject.filesize = length;
                     if (out.is_open())
                     {
                         out << fileobject;
