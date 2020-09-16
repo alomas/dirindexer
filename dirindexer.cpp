@@ -151,7 +151,6 @@ int main(int argc, char *argv[]) {
     filemap->clear();
     loadTree(filemap);
 
-
     if (filemap)
     {
         delete(filemap);
