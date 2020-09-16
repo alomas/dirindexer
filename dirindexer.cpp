@@ -14,7 +14,7 @@ struct filedata {
     unsigned long filesize;
 };
 
-std::fstream out, in;
+std::fstream out, in, debug;
 
 std::ostream& operator << (std::ostream& os, const filedata fileobject)
 {
@@ -37,6 +37,7 @@ int loadTree(std::map<string, filedata> *filemap)
 {
     filedata indata;
     int count = 0;
+    debug.open("debug.txt", std::ios::out);
     while (!(in.eof()))
     {
         in >> indata;
@@ -48,9 +49,12 @@ int loadTree(std::map<string, filedata> *filemap)
         {
             count++;
             filemap->insert(std::make_pair(indata.fullpath, indata));
+            debug << indata;
+
         }
     }
     cout << "Number of elements read in: " << filemap->size() << endl;
+    debug.close();
 }
 int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap)
 {
