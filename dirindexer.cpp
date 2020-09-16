@@ -87,25 +87,26 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                     getDirectory(oss.str().c_str(), depth, filemap);
                 }
                 else
-                {
-                    ostringstream oss;
-                    oss << rootdir;
-                    if (rootdir[strlen(rootdir)] != '/')
-                        oss << "/";
-                    oss << entry->d_name;
-                    filemap->insert(std::make_pair(oss.str(), fileobject));
-                    fileobject.fullpath = oss.str();
-                    unsigned long filesize;
-                    std::ifstream file(fileobject.fullpath);
-                    file.seekg (0, file.end);
-                    unsigned long length = file.tellg();
-                    file.close();
-                    fileobject.filesize = length;
-                    if (out.is_open())
+                    if (((entry->d_type & DT_REG) == DT_REG) && (!((entry->d_type & DT_LNK) == DT_LNK)))
                     {
-                        out << fileobject;
+                        ostringstream oss;
+                        oss << rootdir;
+                        if (rootdir[strlen(rootdir)] != '/')
+                            oss << "/";
+                        oss << entry->d_name;
+                        filemap->insert(std::make_pair(oss.str(), fileobject));
+                        fileobject.fullpath = oss.str();
+                        unsigned long filesize;
+                        std::ifstream file(fileobject.fullpath);
+                        file.seekg (0, file.end);
+                        unsigned long length = file.tellg();
+                        file.close();
+                        fileobject.filesize = length;
+                        if (out.is_open())
+                        {
+                            out << fileobject;
+                        }
                     }
-                }
             }
         }
         closedir(dir);
