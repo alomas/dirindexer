@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
     const char *rootdir;
     std::map<std::string, filedata> *filemap, *filemapin;
     filemap = new std::map<string, filedata>;
-    filemapin = new std::map<string, filedata>;
+    // filemapin = new std::map<string, filedata>;
 
     std::cout << "DirIndexer v0.01α" << std::endl;
     if (argc > 1)
@@ -143,9 +143,10 @@ int main(int argc, char *argv[]) {
     else
         in.open("object.txt", std::ios::in );
 
-    loadTree(filemapin);
-
     filemap->clear();
+    loadTree(filemap);
+
+
     if (filemap)
     {
         delete(filemap);
