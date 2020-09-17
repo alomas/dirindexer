@@ -5,6 +5,7 @@
 #include <map>
 #include <iterator>
 #include <fstream>
+#include <openssl/md5.h>
 
 using namespace std;
 
@@ -12,6 +13,7 @@ struct filedata {
     string filename;
     string fullpath;
     unsigned long filesize;
+    unsigned char md5[MD5_DIGEST_LENGTH]
 };
 
 std::fstream out, in, debug;
