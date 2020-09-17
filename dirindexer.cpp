@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <dirent.h>
 #include <sstream>
 #include <cstring>
@@ -12,29 +13,58 @@ using namespace std;
 struct filedata {
     string filename;
     string fullpath;
-    unsigned long filesize;
-    unsigned char md5[MD5_DIGEST_LENGTH];
+    unsigned long filesize{};
+    string md5;
 };
 
-std::fstream out, in, debug;
+std::fstream in;
+std::fstream out;
+std::fstream debug;
 
-std::ostream& operator << (std::ostream& os, const filedata fileobject)
+std::ostream& operator << (std::ostream& os, const filedata& fileobject)
 {
-    return os << fileobject.fullpath << endl << fileobject.filename << endl << fileobject.filesize << endl;
+    return os << fileobject.fullpath << endl << fileobject.filename << endl << fileobject.filesize << endl << fileobject.md5 << endl;
 }
 
 std::istream& operator >> (std::istream& os, filedata& fileobject)
 {
-
     std::getline( os,  fileobject.fullpath);
     std::getline( os , fileobject.filename);
     string filesizestr;
     std::getline( os , filesizestr);
     if (!(filesizestr.empty()))
         fileobject.filesize = std::stol(filesizestr);
-
+    std::getline(os, fileobject.md5);
     return os;
 }
+
+string getMD5(const char *fullpath)
+{
+    MD5_CTX mdContext;
+    int bytes;
+    unsigned char data[1024];
+    int i;
+    unsigned char checksum[MD5_DIGEST_LENGTH];
+    FILE *inFile = fopen ((const char *) fullpath, "rb");
+
+    MD5_Init (&mdContext);
+    while ((bytes = fread (data, 1, 1024, inFile)) != 0)
+        MD5_Update (&mdContext, data, bytes);
+    MD5_Final (checksum,&mdContext);
+    stringstream oss;
+    for(i = 0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        printf("%02x", checksum[i]);
+        oss << std::right << setw(2) << std::setfill('0') << std::hex << (short)checksum[i];
+        string thestring = oss.str();
+    }
+    printf (" %s\n", fullpath);
+    fclose (inFile);
+    string md5;
+    md5 = oss.str();
+    return md5;
+}
+
 int loadTree(std::map<string, filedata> *filemap)
 {
     filedata indata;
@@ -43,28 +73,36 @@ int loadTree(std::map<string, filedata> *filemap)
     while (!(in.eof()))
     {
         in >> indata;
-        if ((in.eof()))
-        {
-            bool eof = true;
-        }
-        else
+        if (!(in.eof()))
         {
             count++;
             filemap->insert(std::make_pair(indata.fullpath, indata));
             debug << indata;
-
         }
     }
     cout << "Number of elements read in: " << filemap->size() << endl;
     debug.close();
+    return 0;
 }
+
+
+
+unsigned long getFileSize(const string& fullpath)
+{
+    std::ifstream file(fullpath);
+    file.seekg (0, file.end);
+    unsigned long length = file.tellg();
+    file.close();
+    return length;
+}
+
 int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap)
 {
     struct dirent *entry;
     DIR *dir;
     dir = opendir(rootdir);
     depth++;
-    if (dir == NULL)
+    if (dir == nullptr)
     {
         string errmsg = "Error opening";
         errmsg += rootdir;
@@ -77,56 +115,48 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
             filedata fileobject;
             fileobject.filename = entry->d_name;
             fileobject.fullpath = rootdir;
-            if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+            if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
             {
                 if (entry->d_type & DT_DIR)
                 {
                     ostringstream oss;
-                    oss << rootdir;
-                    if (rootdir[strlen(rootdir)] != '/')
-                        oss << "/";
-                    oss << entry->d_name;
+                    oss << rootdir << "/" << entry->d_name;
                     getDirectory(oss.str().c_str(), depth, filemap);
                 }
                 else
-                    if (((entry->d_type & DT_REG) == DT_REG) && (!((entry->d_type & DT_LNK) == DT_LNK)))
+                    if (((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
                     {
                         ostringstream oss;
-                        oss << rootdir;
-                        if (rootdir[strlen(rootdir)] != '/')
-                            oss << "/";
-                        oss << entry->d_name;
+                        oss << rootdir << "/" << entry->d_name;
                         filemap->insert(std::make_pair(oss.str(), fileobject));
                         fileobject.fullpath = oss.str();
-                        unsigned long filesize;
-                        std::ifstream file(fileobject.fullpath);
-                        file.seekg (0, file.end);
-                        unsigned long length = file.tellg();
-                        file.close();
-                        fileobject.filesize = length;
+                        fileobject.filesize = getFileSize(fileobject.fullpath);
+                        fileobject.md5 = string(getMD5(fileobject.fullpath.c_str()));
                         if (out.is_open())
-                        {
                             out << fileobject;
-                        }
                     }
             }
         }
         closedir(dir);
     }
+    return 0;
 }
+
 
 int main(int argc, char *argv[]) {
     struct dirent *entry;
     DIR *dir;
-    const char *rootdir;
+    char *rootdir;
     std::map<std::string, filedata> *filemap, *filemapin;
     filemap = new std::map<string, filedata>;
-    // filemapin = new std::map<string, filedata>;
 
     std::cout << "DirIndexer v0.01α" << std::endl;
     if (argc > 1)
     {
         rootdir = argv[1];
+        int dirlen = strlen(rootdir);
+        if (rootdir[dirlen-1] == '/')
+            rootdir[dirlen-1] = 0;
     }
     if (argc > 2)
         out.open(argv[2], std::ios::out);
@@ -139,7 +169,6 @@ int main(int argc, char *argv[]) {
     filedata outdata;
     std::map<string,filedata>::iterator it=filemap->begin();
     outdata = (filedata)(it->second);
-
 
     if (out.is_open())
     {
