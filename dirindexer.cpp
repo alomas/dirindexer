@@ -13,7 +13,7 @@ struct filedata {
     string filename;
     string fullpath;
     unsigned long filesize;
-    unsigned char md5[MD5_DIGEST_LENGTH]
+    unsigned char md5[MD5_DIGEST_LENGTH];
 };
 
 std::fstream out, in, debug;
