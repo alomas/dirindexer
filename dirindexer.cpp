@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
     {
         rootdir = argv[1];
         int dirlen = strlen(rootdir);
-        if (rootdir[dirlen-1] == '/')
+        if (strlen(rootdir) > 1 && rootdir[dirlen-1] == '/')
             rootdir[dirlen-1] = 0;
     }
     if (argc > 2)
