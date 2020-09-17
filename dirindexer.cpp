@@ -120,14 +120,20 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                 if (entry->d_type & DT_DIR)
                 {
                     ostringstream oss;
-                    oss << rootdir << "/" << entry->d_name;
+                    oss << rootdir;
+                    if (strcmp(rootdir, "/"))
+                        oss << "/";
+                    oss << entry->d_name;
                     getDirectory(oss.str().c_str(), depth, filemap);
                 }
                 else
                     if (((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
                     {
                         ostringstream oss;
-                        oss << rootdir << "/" << entry->d_name;
+                        oss << rootdir;
+                        if (strcmp(rootdir, "/"))
+                            oss << "/";
+                        oss << entry->d_name;
                         filemap->insert(std::make_pair(oss.str(), fileobject));
                         fileobject.fullpath = oss.str();
                         fileobject.filesize = getFileSize(fileobject.fullpath);
