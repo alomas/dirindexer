@@ -121,7 +121,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                 {
                     ostringstream oss;
                     oss << rootdir;
-                    if (strcmp(rootdir, "/"))
+                    if (strcmp(rootdir, "/") != 0)
                         oss << "/";
                     oss << entry->d_name;
                     getDirectory(oss.str().c_str(), depth, filemap);
@@ -131,7 +131,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                     {
                         ostringstream oss;
                         oss << rootdir;
-                        if (strcmp(rootdir, "/"))
+                        if (strcmp(rootdir, "/") != 0)
                             oss << "/";
                         oss << entry->d_name;
                         filemap->insert(std::make_pair(oss.str(), fileobject));
@@ -150,10 +150,8 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
 
 
 int main(int argc, char *argv[]) {
-    struct dirent *entry;
-    DIR *dir;
     char *rootdir;
-    std::map<std::string, filedata> *filemap, *filemapin;
+    std::map<std::string, filedata> *filemap;
     filemap = new std::map<string, filedata>;
 
     std::cout << "DirIndexer v0.01α" << std::endl;
@@ -188,10 +186,7 @@ int main(int argc, char *argv[]) {
     filemap->clear();
     loadTree(filemap);
 
-    if (filemap)
-    {
-        delete(filemap);
-        filemap = NULL;
-    }
+    delete (filemap);
+    filemap = nullptr;
     return 0;
 }
