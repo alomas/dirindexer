@@ -1,6 +1,11 @@
 #include <iostream>
 #include <iomanip>
+#if _WIN64 || _WIN32
+#include "dirent.h"
+#endif
+#ifndef _WIN64 && _WIN32
 #include <dirent.h>
+#endif
 #include <sstream>
 #include <cstring>
 #include <map>
