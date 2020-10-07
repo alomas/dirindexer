@@ -5,3 +5,5 @@
 /.vs/dirindexer/v16/Browse.VC.db
 /.vs
 /out/build/x64-Debug (default)
+/out/build
+/CMakeSettings.json

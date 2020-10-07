@@ -1,11 +1,15 @@
 #include <iostream>
 #include <iomanip>
+#include <include/cxxopts.hpp>
 #if _WIN64 || _WIN32
-#include "dirent.h"
+#include <include/dirent.h>
 #endif
+
 #ifndef _WIN64 && _WIN32
+
 #include <dirent.h>
 #endif
+
 #include <sstream>
 #include <cstring>
 #include <map>
@@ -52,6 +56,10 @@ string getMD5(const char *fullpath)
     unsigned char checksum[MD5_DIGEST_LENGTH];
     FILE *inFile = fopen ((const char *) fullpath, "rb");
 
+    if (inFile == nullptr)
+    {
+        return string("00000000000000000000000000000000");
+    }
     MD5_Init (&mdContext);
     while ((bytes = fread (data, 1, 1024, inFile)) != 0)
         MD5_Update (&mdContext, data, bytes);
@@ -74,7 +82,7 @@ int loadTree(std::map<string, filedata> *filemap)
 {
     filedata indata;
     int count = 0;
-    debug.open("debug.txt", std::ios::out);
+
     while (!(in.eof()))
     {
         in >> indata;
@@ -90,15 +98,50 @@ int loadTree(std::map<string, filedata> *filemap)
     return 0;
 }
 
-
+#if _WIN64
+#define stat _stat64
+#endif
 
 unsigned long getFileSize(const string& fullpath)
 {
+    struct stat filestat;
+    int result;
     std::ifstream file(fullpath);
-    file.seekg (0, file.end);
+    file.seekg(0, file.end);
     unsigned long length = file.tellg();
     file.close();
-    return length;
+    result = stat(fullpath.c_str(), &filestat);
+    return filestat.st_size;
+}
+
+bool isFile(dirent* entry)
+{
+    cout << entry->d_name << endl;
+    #if _WIN64 || _WIN32
+    if ( (entry->d_type & DT_REG) == DT_REG)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
+    #endif
+
+    #ifndef _WIN64 && _WIN32
+    if (isFile(entry) && ((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
+    {
+        return true;
+    }
+    else
+    {
+        retun false;
+    }
+    cout << "Not windows" << endl;
+    #endif
+    
+    return true;
 }
 
 int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap)
@@ -132,7 +175,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                     getDirectory(oss.str().c_str(), depth, filemap);
                 }
                 else
-                    if (((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
+                    if (isFile(entry))
                     {
                         ostringstream oss;
                         oss << rootdir;
@@ -158,19 +201,72 @@ int main(int argc, char *argv[]) {
     char *rootdir;
     std::map<std::string, filedata> *filemap;
     filemap = new std::map<string, filedata>;
+    int opt;
 
-    std::cout << "DirIndexer v0.01α" << std::endl;
-    if (argc > 1)
+    std::cout << "DirIndexer v0.02 alpha" << endl;
+
+    cxxopts::Options options("DirIndexer", "Index a file system.");
+    options.add_options()
+        ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>())
+        ("r,rootdir", "Root Directory", cxxopts::value<std::string>())
+        ("i,integer", "Int param", cxxopts::value<int>())
+        ("o,output", "Output filename", cxxopts::value<std::string>())
+        ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
+        ;
+    auto result = options.parse(argc, argv);
+    std::string debugfilestr, outputfilestr, rootdiropt;
+    if (result.count("output"))
+    {
+        outputfilestr = result["output"].as<std::string>();
+    }
+    else
+    {
+        outputfilestr = "./output.txt";
+    }
+    if (result.count("debug"))
+    {
+        debugfilestr = result["debug"].as<std::string>();
+    }
+    else
+    {
+        debugfilestr = "./debug.log";
+    }
+    debug.open(debugfilestr, std::ios::out);
+    cout << "Output file = " << outputfilestr << endl;
+    const char* rootdirstr;
+
+    if (result.count("rootdir"))
+    {
+        rootdiropt = result["rootdir"].as<std::string>();
+        if ((rootdiropt.length() > 3) && (rootdiropt.back() == '/'))
+        {
+            rootdiropt.pop_back();
+        }
+        rootdirstr = rootdiropt.c_str();
+    }
+    else
+    {
+        rootdirstr = ".";
+    }
+    rootdir = (char*)rootdirstr;
+
+    cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
+    if (result.count("help"))
+    {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
+   /*
+    if (argc > 10)
     {
         rootdir = argv[1];
         int dirlen = strlen(rootdir);
         if (strlen(rootdir) > 1 && rootdir[dirlen-1] == '/')
             rootdir[dirlen-1] = 0;
     }
-    if (argc > 2)
-        out.open(argv[2], std::ios::out);
-    else
-        out.open("object.txt", std::ios::out );
+    */
+    out.open(outputfilestr, std::ios::out );
+
     getDirectory(rootdir, 0, filemap);
     cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
 
@@ -183,13 +279,11 @@ int main(int argc, char *argv[]) {
     {
         out.close();
     }
-    if (argc > 2)
-        in.open(argv[2], std::ios::in);
-    else
-        in.open("object.txt", std::ios::in );
+    in.open(outputfilestr, std::ios::in );
 
     filemap->clear();
     loadTree(filemap);
+    filemap->clear();
 
     delete (filemap);
     filemap = nullptr;
