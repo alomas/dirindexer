@@ -144,7 +144,7 @@ int loadTree(std::map<string, filedata> *filemap)
 #if _WIN64
 #define stat _stat64
 #else
-#include <sys/include.h>
+#include <sys/stat.h>
 #define stat stat64
 #endif
 
