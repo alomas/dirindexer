@@ -5,7 +5,7 @@
 #include <include/dirent.h>
 #endif
 
-#ifndef _WIN64 && _WIN32
+#if !defined(_WIN64) && !defined(_WIN32)
 
 #include <dirent.h>
 #endif
@@ -143,6 +143,9 @@ int loadTree(std::map<string, filedata> *filemap)
 
 #if _WIN64
 #define stat _stat64
+#else
+#include <sys/include.h>
+#define stat stat64
 #endif
 
 unsigned long getFileSize(const string& fullpath)
@@ -172,14 +175,14 @@ bool isFile(dirent* entry)
 
     #endif
 
-    #ifndef _WIN64 && _WIN32
-    if (isFile(entry) && ((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
+    #if !defined(_WIN64) && !defined(_WIN32)
+    if (((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
     {
         return true;
     }
     else
     {
-        retun false;
+        return false;
     }
     cout << "Not windows" << endl;
     #endif
