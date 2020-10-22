@@ -21,7 +21,7 @@ if (UNIX)
 endif (UNIX)
 
 if (UNIX)
-	include_directories($ENV{srcdir}/openssl/include/)
+	include_directories($ENV{srcdir}/openssl/include/ $ENV{libs}/cxxopts/)
 	link_directories($ENV{srcdir}/openssl/)
 	link_libraries(crypto)
 endif (UNIX)
