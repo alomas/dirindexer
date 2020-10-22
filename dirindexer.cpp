@@ -68,7 +68,7 @@ string getMD5(const char *fullpath)
 {
     MD5_CTX mdContext;
     int bytes;
-    unsigned char data[1024];
+    unsigned char data[32767];
     int i;
     unsigned char checksum[MD5_DIGEST_LENGTH];
     FILE *inFile = fopen ((const char *) fullpath, "rb");
@@ -78,7 +78,7 @@ string getMD5(const char *fullpath)
         return string("00000000000000000000000000000000");
     }
     MD5_Init (&mdContext);
-    while ((bytes = fread (data, 1, 1024, inFile)) != 0)
+    while ((bytes = fread (data, 1, 32767, inFile)) != 0)
         MD5_Update (&mdContext, data, bytes);
     MD5_Final (checksum,&mdContext);
     stringstream oss;
