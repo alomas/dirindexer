@@ -1,6 +1,15 @@
 #include <iostream>
 #include <iomanip>
+#include <include/cxxopts.hpp>
+#if _WIN64 || _WIN32
+#include <include/dirent.h>
+#endif
+
+#if !defined(_WIN64) && !defined(_WIN32)
+
 #include <dirent.h>
+#endif
+
 #include <sstream>
 #include <cstring>
 #include <map>
@@ -13,17 +22,23 @@ using namespace std;
 struct filedata {
     string filename;
     string fullpath;
-    unsigned long filesize{};
+    long long filesize{};
     string md5;
 };
 
 std::fstream in;
 std::fstream out;
 std::fstream debug;
+std::stringstream filestream;
 
 std::ostream& operator << (std::ostream& os, const filedata& fileobject)
 {
-    return os << fileobject.fullpath << endl << fileobject.filename << endl << fileobject.filesize << endl << fileobject.md5 << endl;
+    return os << fileobject.md5 << '|'
+        << fileobject.filesize << '|'
+        << fileobject.filename << "|"
+        << fileobject.fullpath << '|'
+        << '\n';
+    // return os << fileobject.fullpath << endl << fileobject.filename << endl << fileobject.filesize << endl << fileobject.md5 << endl;
 }
 
 std::istream& operator >> (std::istream& os, filedata& fileobject)
@@ -33,11 +48,22 @@ std::istream& operator >> (std::istream& os, filedata& fileobject)
     string filesizestr;
     std::getline( os , filesizestr);
     if (!(filesizestr.empty()))
-        fileobject.filesize = std::stol(filesizestr);
+        fileobject.filesize = std::stoll(filesizestr);
     std::getline(os, fileobject.md5);
     return os;
 }
 
+std::istream& operator >> (std::stringstream& os, filedata& fileobject)
+{
+    std::getline(os, fileobject.fullpath);
+    std::getline(os, fileobject.filename);
+    string filesizestr;
+    std::getline(os, filesizestr);
+    if (!(filesizestr.empty()))
+        fileobject.filesize = std::stoll(filesizestr);
+    std::getline(os, fileobject.md5);
+    return os;
+}
 string getMD5(const char *fullpath)
 {
     MD5_CTX mdContext;
@@ -47,6 +73,10 @@ string getMD5(const char *fullpath)
     unsigned char checksum[MD5_DIGEST_LENGTH];
     FILE *inFile = fopen ((const char *) fullpath, "rb");
 
+    if (inFile == nullptr)
+    {
+        return string("00000000000000000000000000000000");
+    }
     MD5_Init (&mdContext);
     while ((bytes = fread (data, 1, 1024, inFile)) != 0)
         MD5_Update (&mdContext, data, bytes);
@@ -65,15 +95,41 @@ string getMD5(const char *fullpath)
     return md5;
 }
 
+int loadTree(std::map<string, filedata>* filemap, long long maxfilesize, long long minfilesize, string filename)
+{
+    filedata rec;
+    string filesizestr;
+    long counter = 0;
+
+    std::ifstream inputfile(filename);
+    
+    while (std::getline(inputfile, rec.md5, '|') &&
+        std::getline(inputfile, filesizestr, '|') &&
+        std::getline(inputfile, rec.filename, '|') &&
+        std::getline(inputfile, rec.fullpath, '|') &&
+        inputfile >> std::ws)
+    {
+        counter++;
+        if (counter % 100000 == 0)
+            cout << setfill('0') << setw(7) << counter << ".\t" << rec.fullpath << endl;
+        if (!(filesizestr.empty()))
+            rec.filesize = std::stoll(filesizestr);
+        filemap->insert(std::make_pair(rec.fullpath, rec));
+    }
+
+    inputfile.close();
+    return 0;
+
+}
 int loadTree(std::map<string, filedata> *filemap)
 {
     filedata indata;
     int count = 0;
-    debug.open("debug.txt", std::ios::out);
-    while (!(in.eof()))
+
+    while (!(filestream.eof()))
     {
-        in >> indata;
-        if (!(in.eof()))
+        filestream >> indata;
+        if (!(filestream.eof()))
         {
             count++;
             filemap->insert(std::make_pair(indata.fullpath, indata));
@@ -85,18 +141,56 @@ int loadTree(std::map<string, filedata> *filemap)
     return 0;
 }
 
-
+#if _WIN64
+#define stat _stat64
+#else
+#include <sys/stat.h>
+#define stat stat64
+#endif
 
 unsigned long getFileSize(const string& fullpath)
 {
+    struct stat filestat;
+    int result;
     std::ifstream file(fullpath);
-    file.seekg (0, file.end);
+    file.seekg(0, file.end);
     unsigned long length = file.tellg();
     file.close();
-    return length;
+    result = stat(fullpath.c_str(), &filestat);
+    return filestat.st_size;
 }
 
-int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap)
+bool isFile(dirent* entry)
+{
+    // cout << entry->d_name << endl;
+    #if _WIN64 || _WIN32
+    if ( (entry->d_type & DT_REG) == DT_REG)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
+    #endif
+
+    #if !defined(_WIN64) && !defined(_WIN32)
+    if (((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+    cout << "Not windows" << endl;
+    #endif
+    
+    return true;
+}
+
+int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, long long maxfilesize, long long minfilesize)
 {
     struct dirent *entry;
     DIR *dir;
@@ -124,22 +218,30 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                     if (strcmp(rootdir, "/") != 0)
                         oss << "/";
                     oss << entry->d_name;
-                    getDirectory(oss.str().c_str(), depth, filemap);
+                    getDirectory(oss.str().c_str(), depth, filemap, maxfilesize, minfilesize);
                 }
                 else
-                    if (((entry->d_type & DT_REG) == DT_REG) && (entry->d_type & DT_LNK) != DT_LNK)
+                    if (isFile(entry))
                     {
                         ostringstream oss;
                         oss << rootdir;
                         if (strcmp(rootdir, "/") != 0)
                             oss << "/";
                         oss << entry->d_name;
-                        filemap->insert(std::make_pair(oss.str(), fileobject));
                         fileobject.fullpath = oss.str();
                         fileobject.filesize = getFileSize(fileobject.fullpath);
-                        fileobject.md5 = string(getMD5(fileobject.fullpath.c_str()));
-                        if (out.is_open())
-                            out << fileobject;
+                        if (
+                            ((maxfilesize < 0) || 
+                            (maxfilesize > -1 && fileobject.filesize < maxfilesize)) &&
+                            ((minfilesize < 0) || (minfilesize > -1 && fileobject.filesize > minfilesize))
+                            )
+                        {
+                            fileobject.md5 = string(getMD5(fileobject.fullpath.c_str()));
+                            filemap->insert(std::make_pair(oss.str(), fileobject));
+                            if (out.is_open())
+                                out << fileobject;
+                        }
+
                     }
             }
         }
@@ -153,39 +255,79 @@ int main(int argc, char *argv[]) {
     char *rootdir;
     std::map<std::string, filedata> *filemap;
     filemap = new std::map<string, filedata>;
+    int opt;
+    bool noindex, loadfile;
+    long long maxfilesize, minfilesize;
+    string inputfile;
 
-    std::cout << "DirIndexer v0.01α" << std::endl;
-    if (argc > 1)
+    std::cout << "DirIndexer v0.02 alpha" << endl;
+
+    cxxopts::Options options("DirIndexer", "Index a file system.");
+    options.add_options()
+        ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
+        ("r,root-dir", "Root Directory", cxxopts::value<std::string>()->default_value("."))
+        ("x,max-size", "Max Size file to index", cxxopts::value<long long>()->default_value("-1"))
+        ("n,min-size", "Min Size file to index", cxxopts::value<long long>()->default_value("-1"))
+        ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
+        ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
+        ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
+        ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
+        ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
+        ;
+    auto result = options.parse(argc, argv);
+    maxfilesize = result["max-size"].as<long long>();
+    minfilesize = result["min-size"].as<long long>();
+    loadfile = result["load-file"].as<bool>();
+    inputfile = result["input"].as<string>();
+    noindex = result["no-index"].as<bool>();
+    std::string debugfilestr, outputfilestr, rootdiropt;
+   
+    outputfilestr = result["output"].as<std::string>();
+    debugfilestr = result["debug"].as<std::string>();
+
+    debug.open(debugfilestr, std::ios::out);
+    cout << "Output file = " << outputfilestr << endl;
+    const char* rootdirstr;
+
+    rootdiropt = result["root-dir"].as<std::string>();
+    if ((rootdiropt.length() > 3) && (rootdiropt.back() == '/'))
     {
-        rootdir = argv[1];
-        int dirlen = strlen(rootdir);
-        if (strlen(rootdir) > 1 && rootdir[dirlen-1] == '/')
-            rootdir[dirlen-1] = 0;
+        rootdiropt.pop_back();
     }
-    if (argc > 2)
-        out.open(argv[2], std::ios::out);
-    else
-        out.open("object.txt", std::ios::out );
-    getDirectory(rootdir, 0, filemap);
-    cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
+    rootdirstr = rootdiropt.c_str();
+    rootdir = (char*)rootdirstr;
 
-    filedata indata;
-    filedata outdata;
-    std::map<string,filedata>::iterator it=filemap->begin();
-    outdata = (filedata)(it->second);
+    cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
+    if (result.count("help"))
+    {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
+
+    if (!noindex)
+    {
+        out.open(outputfilestr, std::ios::out);
+        getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize);
+        cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
+    }
 
     if (out.is_open())
     {
         out.close();
     }
-    if (argc > 2)
-        in.open(argv[2], std::ios::in);
-    else
-        in.open("object.txt", std::ios::in );
+    in.open(outputfilestr, std::ios::in );
+
+    std::vector<filedata> data;
 
     filemap->clear();
-    loadTree(filemap);
+    if (loadfile)
+    {
+        cout << "Loading file " << inputfile << "..." << endl;
+        loadTree(filemap, maxfilesize, minfilesize, inputfile);
+        cout << "Loaded file.";
+    }
 
+    filemap->clear();
     delete (filemap);
     filemap = nullptr;
     return 0;
