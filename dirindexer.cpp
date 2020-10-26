@@ -268,6 +268,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                 else
                     if (isFile(entry))
                     {
+                        
                         ostringstream oss;
                         if ((strlen(rootdir) == 3) && (rootdir[2] == '\\'))
                         {
@@ -325,7 +326,7 @@ int main(int argc, char *argv[]) {
         ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
         ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
         ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
-        ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3)", cxxopts::value<std::vector<std::string>>()->default_value(""))
+        ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3[?<level>])", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
         ;
     auto result = options.parse(argc, argv);
