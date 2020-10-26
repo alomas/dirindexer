@@ -38,7 +38,6 @@ std::ostream& operator << (std::ostream& os, const filedata& fileobject)
         << fileobject.filename << "|"
         << fileobject.fullpath << '|'
         << '\n';
-    // return os << fileobject.fullpath << endl << fileobject.filename << endl << fileobject.filesize << endl << fileobject.md5 << endl;
 }
 
 std::istream& operator >> (std::istream& os, filedata& fileobject)
@@ -162,7 +161,6 @@ unsigned long getFileSize(const string& fullpath)
 
 bool isFile(dirent* entry)
 {
-    // cout << entry->d_name << endl;
     #if _WIN64 || _WIN32
     if ( (entry->d_type & DT_REG) == DT_REG)
     {
@@ -190,7 +188,7 @@ bool isFile(dirent* entry)
     return true;
 }
 
-int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, long long maxfilesize, long long minfilesize)
+int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, long long maxfilesize, long long minfilesize, std::vector<std::string> exclude)
 {
     struct dirent *entry;
     DIR *dir;
@@ -211,22 +209,77 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
             fileobject.fullpath = rootdir;
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
             {
-                if (entry->d_type & DT_DIR)
+                if ((entry->d_type & DT_DIR) == DT_DIR)
                 {
                     ostringstream oss;
-                    oss << rootdir;
-                    if (strcmp(rootdir, "/") != 0)
-                        oss << "/";
+                    
+                    if ((strlen(rootdir) == 3) && (rootdir[2] == '\\'))
+                    {
+                        oss << rootdir[0] << rootdir[1] << "/";
+                    }
+                    else
+                    {
+                        oss << rootdir;
+                        if ((strcmp(rootdir, "/") != 0) && (strcmp(rootdir, "\\") != 0))
+                            oss << "/";
+                    }
                     oss << entry->d_name;
-                    getDirectory(oss.str().c_str(), depth, filemap, maxfilesize, minfilesize);
+                    bool skipdir = false;
+                    string temppath;
+                    
+                    std::for_each(exclude.begin(), exclude.end(), [entry, &skipdir, depth](const string str)
+                        {
+                            string depthstr, excludestr;
+                            size_t nPos;
+                            bool anydepth;
+                            int excludedepth;
+                            nPos = str.find("?", 0);
+                            if (nPos == -1)
+                            {
+                                anydepth = true;
+                                excludestr = str;
+                            }
+                            else
+                            {
+                                anydepth = false;
+                                excludestr = str.substr(0, nPos);
+                                depthstr = str.substr(nPos + 1, string::npos);
+                                excludedepth = stoi(depthstr);
+                            }
+
+                            bool depthtest = false;
+                            bool comparetest = false;
+                            if ((anydepth == true) || (excludedepth == depth))
+                                depthtest = true;
+                            if ((excludestr.compare(entry->d_name) == 0))
+                                comparetest = true;
+                            if ( depthtest && comparetest)
+                            {
+                                skipdir = true;
+                            }
+                            else
+                                int x = 8;
+                        });
+                    if (!skipdir)
+                    {
+                        getDirectory(oss.str().c_str(), depth, filemap, maxfilesize, minfilesize, exclude);
+                    }
                 }
                 else
                     if (isFile(entry))
                     {
+                        
                         ostringstream oss;
-                        oss << rootdir;
-                        if (strcmp(rootdir, "/") != 0)
-                            oss << "/";
+                        if ((strlen(rootdir) == 3) && (rootdir[2] == '\\'))
+                        {
+                            oss << rootdir[0] << rootdir[1] << "/";
+                        }
+                        else
+                        {
+                            oss << rootdir;
+                            if ((strcmp(rootdir, "/") != 0) && (strcmp(rootdir, "\\") != 0))
+                                oss << "/";
+                        }
                         oss << entry->d_name;
                         fileobject.fullpath = oss.str();
                         fileobject.filesize = getFileSize(fileobject.fullpath);
@@ -258,6 +311,7 @@ int main(int argc, char *argv[]) {
     int opt;
     bool noindex, loadfile;
     long long maxfilesize, minfilesize;
+    std::vector<std::string>    excludedirs;
     string inputfile;
 
     std::cout << "DirIndexer v0.02 alpha" << endl;
@@ -272,6 +326,7 @@ int main(int argc, char *argv[]) {
         ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
         ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
         ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
+        ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3[?<level>])", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
         ;
     auto result = options.parse(argc, argv);
@@ -280,8 +335,9 @@ int main(int argc, char *argv[]) {
     loadfile = result["load-file"].as<bool>();
     inputfile = result["input"].as<string>();
     noindex = result["no-index"].as<bool>();
+    excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
     std::string debugfilestr, outputfilestr, rootdiropt;
-   
+  
     outputfilestr = result["output"].as<std::string>();
     debugfilestr = result["debug"].as<std::string>();
 
@@ -290,7 +346,7 @@ int main(int argc, char *argv[]) {
     const char* rootdirstr;
 
     rootdiropt = result["root-dir"].as<std::string>();
-    if ((rootdiropt.length() > 3) && (rootdiropt.back() == '/'))
+    if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
     {
         rootdiropt.pop_back();
     }
@@ -307,7 +363,7 @@ int main(int argc, char *argv[]) {
     if (!noindex)
     {
         out.open(outputfilestr, std::ios::out);
-        getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize);
+        getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize, excludedirs);
         cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
     }
 
