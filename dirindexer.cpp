@@ -92,6 +92,7 @@ string getMD5(const char *fullpath, struct configdata &config)
         string thestring = oss.str();
     }
     printf (" %s\n", fullpath);
+    (config.debug) << oss.str() << " " << fullpath << endl;
     fclose (inFile);
     string md5;
     md5 = oss.str();
