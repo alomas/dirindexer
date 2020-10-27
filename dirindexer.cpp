@@ -32,7 +32,6 @@ struct configdata {
 
 std::fstream in;
 std::fstream out;
-std::fstream debug;
 std::stringstream filestream;
 
 std::ostream& operator << (std::ostream& os, const filedata& fileobject)
@@ -328,7 +327,6 @@ int main(int argc, char *argv[]) {
     outputfilestr = result["output"].as<std::string>();
     debugfilestr = result["debug"].as<std::string>();
     config.debug.open(debugfilestr, std::ios::out);
-    // debug.open(debugfilestr, std::ios::out);
     cout << "Output file = " << outputfilestr << endl;
     const char* rootdirstr;
 
