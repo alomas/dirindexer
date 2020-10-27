@@ -26,6 +26,10 @@ struct filedata {
     string md5;
 };
 
+struct configdata {
+    std::fstream debug;
+};
+
 std::fstream in;
 std::fstream out;
 std::fstream debug;
@@ -63,11 +67,11 @@ std::istream& operator >> (std::stringstream& os, filedata& fileobject)
     std::getline(os, fileobject.md5);
     return os;
 }
-string getMD5(const char *fullpath)
+string getMD5(const char *fullpath, struct configdata &config)
 {
     MD5_CTX mdContext;
     int bytes;
-    unsigned char data[32767];
+    unsigned char data[8192];
     int i;
     unsigned char checksum[MD5_DIGEST_LENGTH];
     FILE *inFile = fopen ((const char *) fullpath, "rb");
@@ -77,7 +81,7 @@ string getMD5(const char *fullpath)
         return string("00000000000000000000000000000000");
     }
     MD5_Init (&mdContext);
-    while ((bytes = fread (data, 1, 32767, inFile)) != 0)
+    while ((bytes = fread (data, 1, 8192, inFile)) != 0)
         MD5_Update (&mdContext, data, bytes);
     MD5_Final (checksum,&mdContext);
     stringstream oss;
@@ -119,25 +123,6 @@ int loadTree(std::map<string, filedata>* filemap, long long maxfilesize, long lo
     inputfile.close();
     return 0;
 
-}
-int loadTree(std::map<string, filedata> *filemap)
-{
-    filedata indata;
-    int count = 0;
-
-    while (!(filestream.eof()))
-    {
-        filestream >> indata;
-        if (!(filestream.eof()))
-        {
-            count++;
-            filemap->insert(std::make_pair(indata.fullpath, indata));
-            debug << indata;
-        }
-    }
-    cout << "Number of elements read in: " << filemap->size() << endl;
-    debug.close();
-    return 0;
 }
 
 #if _WIN64
@@ -188,7 +173,7 @@ bool isFile(dirent* entry)
     return true;
 }
 
-int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, long long maxfilesize, long long minfilesize, std::vector<std::string> exclude)
+int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, long long maxfilesize, long long minfilesize, std::vector<std::string> exclude, struct configdata &config)
 {
     struct dirent *entry;
     DIR *dir;
@@ -262,7 +247,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                         });
                     if (!skipdir)
                     {
-                        getDirectory(oss.str().c_str(), depth, filemap, maxfilesize, minfilesize, exclude);
+                        getDirectory(oss.str().c_str(), depth, filemap, maxfilesize, minfilesize, exclude, config);
                     }
                 }
                 else
@@ -289,7 +274,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                             ((minfilesize < 0) || (minfilesize > -1 && fileobject.filesize > minfilesize))
                             )
                         {
-                            fileobject.md5 = string(getMD5(fileobject.fullpath.c_str()));
+                            fileobject.md5 = string(getMD5(fileobject.fullpath.c_str(), config));
                             filemap->insert(std::make_pair(oss.str(), fileobject));
                             if (out.is_open())
                                 out << fileobject;
@@ -313,6 +298,7 @@ int main(int argc, char *argv[]) {
     long long maxfilesize, minfilesize;
     std::vector<std::string>    excludedirs;
     string inputfile;
+    struct configdata config;
 
     std::cout << "DirIndexer v0.02 alpha" << endl;
 
@@ -340,8 +326,8 @@ int main(int argc, char *argv[]) {
   
     outputfilestr = result["output"].as<std::string>();
     debugfilestr = result["debug"].as<std::string>();
-
-    debug.open(debugfilestr, std::ios::out);
+    config.debug.open(debugfilestr, std::ios::out);
+    // debug.open(debugfilestr, std::ios::out);
     cout << "Output file = " << outputfilestr << endl;
     const char* rootdirstr;
 
@@ -363,10 +349,14 @@ int main(int argc, char *argv[]) {
     if (!noindex)
     {
         out.open(outputfilestr, std::ios::out);
-        getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize, excludedirs);
+        getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize, excludedirs, config);
         cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
     }
 
+    if (config.debug.is_open())
+    {
+        config.debug.close();
+    }
     if (out.is_open())
     {
         out.close();
