@@ -6,7 +6,6 @@
 #endif
 
 #if !defined(_WIN64) && !defined(_WIN32)
-
 #include <dirent.h>
 #endif
 
@@ -28,6 +27,9 @@ struct filedata {
 
 struct configdata {
     std::fstream debug;
+    std::vector<std::string>    excludedirs;
+    std::vector<std::string>    includetypes;
+    bool                        ignorecase;
 };
 
 std::fstream in;
@@ -245,6 +247,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                             else
                                 int x = 8;
                         });
+
                     if (!skipdir)
                     {
                         getDirectory(oss.str().c_str(), depth, filemap, maxfilesize, minfilesize, exclude, config);
@@ -253,33 +256,66 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                 else
                     if (isFile(entry))
                     {
-                        
-                        ostringstream oss;
-                        if ((strlen(rootdir) == 3) && (rootdir[2] == '\\'))
-                        {
-                            oss << rootdir[0] << rootdir[1] << "/";
-                        }
+                        bool skipfile;
+                        if (config.includetypes.empty())
+                            skipfile = false;
                         else
-                        {
-                            oss << rootdir;
-                            if ((strcmp(rootdir, "/") != 0) && (strcmp(rootdir, "\\") != 0))
-                                oss << "/";
-                        }
-                        oss << entry->d_name;
-                        fileobject.fullpath = oss.str();
-                        fileobject.filesize = getFileSize(fileobject.fullpath);
-                        if (
-                            ((maxfilesize < 0) || 
-                            (maxfilesize > -1 && fileobject.filesize < maxfilesize)) &&
-                            ((minfilesize < 0) || (minfilesize > -1 && fileobject.filesize > minfilesize))
-                            )
-                        {
-                            fileobject.md5 = string(getMD5(fileobject.fullpath.c_str(), config));
-                            filemap->insert(std::make_pair(oss.str(), fileobject));
-                            if (out.is_open())
-                                out << fileobject;
-                        }
+                            skipfile = true;
+                        bool alreadymatched = false;
+                        std::for_each(config.includetypes.begin(), config.includetypes.end(), [&config, &alreadymatched, entry, &skipfile](const string str)
+                            {
+                                string fileext, includeextupper, fileextupper;
+                                string filename = entry->d_name;
+                                size_t found = filename.find_last_of('.');
+                                fileext = filename.substr(found + 1);
+                                fileextupper = fileext;
+                                includeextupper = str;
+                                std::transform(fileextupper.begin(), fileextupper.end(), fileextupper.begin(),
+                                    [](unsigned char c) { return std::toupper(c); });
+                                std::transform(includeextupper.begin(), includeextupper.end(), includeextupper.begin(),
+                                    [](unsigned char c) { return std::toupper(c); });
+                                if (
+                                    (config.ignorecase && (includeextupper.compare(fileextupper) == 0))
+                                 || (!(config.ignorecase) && (str.compare(fileext) == 0)))
+                                {
+                                    skipfile = false;
+                                    alreadymatched = true;
+                                }
+                                else
+                                {
+                                    if (!(alreadymatched))
+                                        skipfile = true;
+                                }
 
+                            });
+                        if (!skipfile)
+                        {
+                            ostringstream oss;
+                            if ((strlen(rootdir) == 3) && (rootdir[2] == '\\'))
+                            {
+                                oss << rootdir[0] << rootdir[1] << "/";
+                            }
+                            else
+                            {
+                                oss << rootdir;
+                                if ((strcmp(rootdir, "/") != 0) && (strcmp(rootdir, "\\") != 0))
+                                    oss << "/";
+                            }
+                            oss << entry->d_name;
+                            fileobject.fullpath = oss.str();
+                            fileobject.filesize = getFileSize(fileobject.fullpath);
+                            if (
+                                ((maxfilesize < 0) ||
+                                    (maxfilesize > -1 && fileobject.filesize < maxfilesize)) &&
+                                ((minfilesize < 0) || (minfilesize > -1 && fileobject.filesize > minfilesize))
+                                )
+                            {
+                                fileobject.md5 = string(getMD5(fileobject.fullpath.c_str(), config));
+                                filemap->insert(std::make_pair(oss.str(), fileobject));
+                                if (out.is_open())
+                                    out << fileobject;
+                            }
+                        }
                     }
             }
         }
@@ -309,9 +345,11 @@ int main(int argc, char *argv[]) {
         ("x,max-size", "Max Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("n,min-size", "Min Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
+        ("c,case-insensitive", "Ignore case in exclude/include", cxxopts::value<bool>()->default_value("false"))
         ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
         ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
         ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
+        ("t,include-type", "Include file extensions (iso,txt,pdf)", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3[?<level>])", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
         ;
@@ -322,6 +360,8 @@ int main(int argc, char *argv[]) {
     inputfile = result["input"].as<string>();
     noindex = result["no-index"].as<bool>();
     excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
+    config.includetypes = result["include-type"].as<std::vector<std::string>>();
+    config.ignorecase = result["case-insensitive"].as<bool>();
     std::string debugfilestr, outputfilestr, rootdiropt;
   
     outputfilestr = result["output"].as<std::string>();
