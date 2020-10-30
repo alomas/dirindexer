@@ -379,7 +379,7 @@ int main(int argc, char *argv[]) {
     const char* rootdirstr;
     rootdiropt = result["root-dir"].as<std::string>();
 
-    std::for_each(rootdirs.begin(), rootdirs.end(), [](string rootdiropt)
+    std::for_each(rootdirs.begin(), rootdirs.end(), [outputfilestr, &filemap, &maxfilesize, &minfilesize, &excludedirs, &config, &noindex](string rootdiropt)
         {
             cout << "Rootdir = " << rootdiropt << endl;
             if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
@@ -392,15 +392,17 @@ int main(int argc, char *argv[]) {
             rootdir = (char*)rootdirstr;
 
             cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
+
+            if (!noindex)
+            {
+                if (!(out.is_open()))
+                    out.open(outputfilestr, std::ios::out);
+                getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize, excludedirs, config);
+                cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
+            }
         });
     
-    if (!noindex)
-    {
-        out.open(outputfilestr, std::ios::out);
-        getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize, excludedirs, config);
-        cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
-    }
-
+    
     if (config.debug.is_open())
     {
         config.debug.close();
