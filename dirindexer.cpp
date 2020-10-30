@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
     int opt;
     bool noindex, loadfile;
     long long maxfilesize, minfilesize;
-    std::vector<std::string>    excludedirs;
+    std::vector<std::string>    excludedirs, rootdirs;
     string inputfile;
     struct configdata config;
 
@@ -342,6 +342,7 @@ int main(int argc, char *argv[]) {
     options.add_options()
         ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
         ("r,root-dir", "Root Directory", cxxopts::value<std::string>()->default_value("."))
+        ("s,root-dirs", "Root Directory", cxxopts::value<std::vector<std::string>>()->default_value("."))
         ("x,max-size", "Max Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("n,min-size", "Min Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
@@ -360,31 +361,39 @@ int main(int argc, char *argv[]) {
     inputfile = result["input"].as<string>();
     noindex = result["no-index"].as<bool>();
     excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
+    rootdirs = result["root-dirs"].as<std::vector<std::string>>();
     config.includetypes = result["include-type"].as<std::vector<std::string>>();
     config.ignorecase = result["case-insensitive"].as<bool>();
     std::string debugfilestr, outputfilestr, rootdiropt;
-  
-    outputfilestr = result["output"].as<std::string>();
-    debugfilestr = result["debug"].as<std::string>();
-    config.debug.open(debugfilestr, std::ios::out);
-    cout << "Output file = " << outputfilestr << endl;
-    const char* rootdirstr;
 
-    rootdiropt = result["root-dir"].as<std::string>();
-    if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
-    {
-        rootdiropt.pop_back();
-    }
-    rootdirstr = rootdiropt.c_str();
-    rootdir = (char*)rootdirstr;
-
-    cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
     if (result.count("help"))
     {
         std::cout << options.help() << std::endl;
         exit(0);
     }
 
+    outputfilestr = result["output"].as<std::string>();
+    debugfilestr = result["debug"].as<std::string>();
+    config.debug.open(debugfilestr, std::ios::out);
+    cout << "Output file = " << outputfilestr << endl;
+    const char* rootdirstr;
+    rootdiropt = result["root-dir"].as<std::string>();
+
+    std::for_each(rootdirs.begin(), rootdirs.end(), [](string rootdiropt)
+        {
+            cout << "Rootdir = " << rootdiropt << endl;
+            if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
+            {
+                rootdiropt.pop_back();
+            }
+            const char* rootdirstr;
+            rootdirstr = rootdiropt.c_str();
+            char* rootdir;
+            rootdir = (char*)rootdirstr;
+
+            cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
+        });
+    
     if (!noindex)
     {
         out.open(outputfilestr, std::ios::out);
