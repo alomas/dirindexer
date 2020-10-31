@@ -341,8 +341,8 @@ int main(int argc, char *argv[]) {
     cxxopts::Options options("DirIndexer", "Index a file system.");
     options.add_options()
         ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
-        ("r,root-dir", "Root Directory", cxxopts::value<std::string>()->default_value("."))
-        ("s,root-dirs", "Root Directory", cxxopts::value<std::vector<std::string>>()->default_value("."))
+        //("r,root-dir", "Root Directory", cxxopts::value<std::string>()->default_value("."))
+        ("r,root-dirs", "Root Directory(ies)", cxxopts::value<std::vector<std::string>>()->default_value("."))
         ("x,max-size", "Max Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("n,min-size", "Min Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
@@ -377,7 +377,7 @@ int main(int argc, char *argv[]) {
     config.debug.open(debugfilestr, std::ios::out);
     cout << "Output file = " << outputfilestr << endl;
     const char* rootdirstr;
-    rootdiropt = result["root-dir"].as<std::string>();
+    //rootdiropt = result["root-dir"].as<std::string>();
 
     std::for_each(rootdirs.begin(), rootdirs.end(), [outputfilestr, &filemap, &maxfilesize, &minfilesize, &excludedirs, &config, &noindex](string rootdiropt)
         {
