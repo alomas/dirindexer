@@ -30,6 +30,8 @@ struct configdata {
     std::vector<std::string>    excludedirs;
     std::vector<std::string>    includetypes;
     bool                        ignorecase;
+    long long                   maxfilesize;
+    long long                   minfilesize;
 };
 
 std::fstream in;
@@ -175,7 +177,7 @@ bool isFile(dirent* entry)
     return true;
 }
 
-int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, long long maxfilesize, long long minfilesize, std::vector<std::string> exclude, struct configdata &config)
+int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, std::vector<std::string> exclude, struct configdata &config)
 {
     struct dirent *entry;
     DIR *dir;
@@ -244,13 +246,11 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                             {
                                 skipdir = true;
                             }
-                            else
-                                int x = 8;
                         });
 
                     if (!skipdir)
                     {
-                        getDirectory(oss.str().c_str(), depth, filemap, maxfilesize, minfilesize, exclude, config);
+                        getDirectory(oss.str().c_str(), depth, filemap, exclude, config);
                     }
                 }
                 else
@@ -286,7 +286,6 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                                     if (!(alreadymatched))
                                         skipfile = true;
                                 }
-
                             });
                         if (!skipfile)
                         {
@@ -305,9 +304,9 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                             fileobject.fullpath = oss.str();
                             fileobject.filesize = getFileSize(fileobject.fullpath);
                             if (
-                                ((maxfilesize < 0) ||
-                                    (maxfilesize > -1 && fileobject.filesize < maxfilesize)) &&
-                                ((minfilesize < 0) || (minfilesize > -1 && fileobject.filesize > minfilesize))
+                                ((config.maxfilesize < 0) ||
+                                    (config.maxfilesize > -1 && fileobject.filesize < config.maxfilesize)) &&
+                                ((config.minfilesize < 0) || (config.minfilesize > -1 && fileobject.filesize > config.minfilesize))
                                 )
                             {
                                 fileobject.md5 = string(getMD5(fileobject.fullpath.c_str(), config));
@@ -331,7 +330,6 @@ int main(int argc, char *argv[]) {
     filemap = new std::map<string, filedata>;
     int opt;
     bool noindex, loadfile;
-    long long maxfilesize, minfilesize;
     std::vector<std::string>    excludedirs, rootdirs;
     string inputfile;
     struct configdata config;
@@ -355,8 +353,8 @@ int main(int argc, char *argv[]) {
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
         ;
     auto result = options.parse(argc, argv);
-    maxfilesize = result["max-size"].as<long long>();
-    minfilesize = result["min-size"].as<long long>();
+    config.maxfilesize = result["max-size"].as<long long>();
+    config.minfilesize = result["min-size"].as<long long>();
     loadfile = result["load-file"].as<bool>();
     inputfile = result["input"].as<string>();
     noindex = result["no-index"].as<bool>();
@@ -379,7 +377,7 @@ int main(int argc, char *argv[]) {
     const char* rootdirstr;
     //rootdiropt = result["root-dir"].as<std::string>();
 
-    std::for_each(rootdirs.begin(), rootdirs.end(), [outputfilestr, &filemap, &maxfilesize, &minfilesize, &excludedirs, &config, &noindex](string rootdiropt)
+    std::for_each(rootdirs.begin(), rootdirs.end(), [outputfilestr, &filemap, &excludedirs, &config, &noindex](string rootdiropt)
         {
             cout << "Rootdir = " << rootdiropt << endl;
             if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
@@ -397,7 +395,7 @@ int main(int argc, char *argv[]) {
             {
                 if (!(out.is_open()))
                     out.open(outputfilestr, std::ios::out);
-                getDirectory(rootdir, 0, filemap, maxfilesize, minfilesize, excludedirs, config);
+                getDirectory(rootdir, 0, filemap, excludedirs, config);
                 cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
             }
         });
@@ -419,7 +417,7 @@ int main(int argc, char *argv[]) {
     if (loadfile)
     {
         cout << "Loading file " << inputfile << "..." << endl;
-        loadTree(filemap, maxfilesize, minfilesize, inputfile);
+        loadTree(filemap, config.maxfilesize, config.minfilesize, inputfile);
         cout << "Loaded file.";
     }
 
