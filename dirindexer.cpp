@@ -35,6 +35,7 @@ struct configdata {
     bool                        ignorecase = false;
     long long                   maxfilesize = -1;
     long long                   minfilesize = -1;
+    int                         maxdepth = -1;
     std::map<std::string, filedata>* filemap = NULL;
     std::string                 inputfile;
     bool                        loadfile = false;
@@ -252,7 +253,8 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
 
                     if (!skipdir)
                     {
-                        getDirectory(oss.str().c_str(), depth, config);
+                        if ((config.maxdepth != -1) && (depth < config.maxdepth))
+                            getDirectory(oss.str().c_str(), depth, config);
                     }
                 }
                 else
@@ -329,6 +331,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
 {
     config.maxfilesize = result["max-size"].as<long long>();
     config.minfilesize = result["min-size"].as<long long>();
+    config.maxdepth = result["max-depth"].as<int>();
     config.loadfile = result["load-file"].as<bool>();
     config.inputfile = result["input"].as<string>();
     config.noindex = result["no-index"].as<bool>();
@@ -359,6 +362,7 @@ int main(int argc, char *argv[]) {
         ("r,root-dirs", "Root Directory(ies)", cxxopts::value<std::vector<std::string>>()->default_value("."))
         ("x,max-size", "Max Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("n,min-size", "Min Size file to index", cxxopts::value<long long>()->default_value("-1"))
+        ("p,max-depth", "Max Depth to index", cxxopts::value<int>()->default_value("-1"))
         ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
         ("c,case-insensitive", "Ignore case in exclude/include", cxxopts::value<bool>()->default_value("false"))
         ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
