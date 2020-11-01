@@ -26,17 +26,20 @@ struct filedata {
 };
 
 struct configdata {
-    std::fstream debug;
+    std::fstream                debug;
+    std::fstream                out; // Output file stream
+    std::fstream                in;  // Input file stream
+    std::vector<std::string>    rootdirs;
     std::vector<std::string>    excludedirs;
     std::vector<std::string>    includetypes;
-    bool                        ignorecase;
-    long long                   maxfilesize;
-    long long                   minfilesize;
+    bool                        ignorecase = false;
+    long long                   maxfilesize = -1;
+    long long                   minfilesize = -1;
+    std::map<std::string, filedata>* filemap = NULL;
+    std::string                 inputfile;
+    bool                        loadfile = false;
+    bool                        noindex = false;
 };
-
-std::fstream in;
-std::fstream out;
-std::stringstream filestream;
 
 std::ostream& operator << (std::ostream& os, const filedata& fileobject)
 {
@@ -73,7 +76,7 @@ std::istream& operator >> (std::stringstream& os, filedata& fileobject)
 string getMD5(const char *fullpath, struct configdata &config)
 {
     MD5_CTX mdContext;
-    int bytes;
+    size_t bytes;
     unsigned char data[8192];
     int i;
     unsigned char checksum[MD5_DIGEST_LENGTH];
@@ -117,7 +120,7 @@ int loadTree(std::map<string, filedata>* filemap, long long maxfilesize, long lo
         inputfile >> std::ws)
     {
         counter++;
-        if (counter % 100000 == 0)
+        if (counter % 1000 == 0)
             cout << setfill('0') << setw(7) << counter << ".\t" << rec.fullpath << endl;
         if (!(filesizestr.empty()))
             rec.filesize = std::stoll(filesizestr);
@@ -152,14 +155,9 @@ bool isFile(dirent* entry)
 {
     #if _WIN64 || _WIN32
     if ( (entry->d_type & DT_REG) == DT_REG)
-    {
         return true;
-    }
     else
-    {
         return false;
-    }
-
     #endif
 
     #if !defined(_WIN64) && !defined(_WIN32)
@@ -177,7 +175,7 @@ bool isFile(dirent* entry)
     return true;
 }
 
-int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *filemap, std::vector<std::string> exclude, struct configdata &config)
+int getDirectory(const char *rootdir, int depth, struct configdata &config)
 {
     struct dirent *entry;
     DIR *dir;
@@ -216,7 +214,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                     bool skipdir = false;
                     string temppath;
                     
-                    std::for_each(exclude.begin(), exclude.end(), [entry, &skipdir, depth](const string str)
+                    std::for_each(config.excludedirs.begin(), config.excludedirs.end(), [entry, &skipdir, depth](const string str)
                         {
                             string depthstr, excludestr;
                             size_t nPos;
@@ -250,7 +248,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
 
                     if (!skipdir)
                     {
-                        getDirectory(oss.str().c_str(), depth, filemap, exclude, config);
+                        getDirectory(oss.str().c_str(), depth, config);
                     }
                 }
                 else
@@ -310,9 +308,9 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
                                 )
                             {
                                 fileobject.md5 = string(getMD5(fileobject.fullpath.c_str(), config));
-                                filemap->insert(std::make_pair(oss.str(), fileobject));
-                                if (out.is_open())
-                                    out << fileobject;
+                                config.filemap->insert(std::make_pair(oss.str(), fileobject));
+                                if (config.out.is_open())
+                                    config.out << fileobject;
                             }
                         }
                     }
@@ -323,15 +321,7 @@ int getDirectory(const char *rootdir, int depth, std::map<string, filedata> *fil
     return 0;
 }
 
-
 int main(int argc, char *argv[]) {
-    char *rootdir;
-    std::map<std::string, filedata> *filemap;
-    filemap = new std::map<string, filedata>;
-    int opt;
-    bool noindex, loadfile;
-    std::vector<std::string>    excludedirs, rootdirs;
-    string inputfile;
     struct configdata config;
 
     std::cout << "DirIndexer v0.02 alpha" << endl;
@@ -339,7 +329,6 @@ int main(int argc, char *argv[]) {
     cxxopts::Options options("DirIndexer", "Index a file system.");
     options.add_options()
         ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
-        //("r,root-dir", "Root Directory", cxxopts::value<std::string>()->default_value("."))
         ("r,root-dirs", "Root Directory(ies)", cxxopts::value<std::vector<std::string>>()->default_value("."))
         ("x,max-size", "Max Size file to index", cxxopts::value<long long>()->default_value("-1"))
         ("n,min-size", "Min Size file to index", cxxopts::value<long long>()->default_value("-1"))
@@ -353,13 +342,14 @@ int main(int argc, char *argv[]) {
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
         ;
     auto result = options.parse(argc, argv);
+    config.filemap = new std::map<string, filedata>;
     config.maxfilesize = result["max-size"].as<long long>();
     config.minfilesize = result["min-size"].as<long long>();
-    loadfile = result["load-file"].as<bool>();
-    inputfile = result["input"].as<string>();
-    noindex = result["no-index"].as<bool>();
-    excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
-    rootdirs = result["root-dirs"].as<std::vector<std::string>>();
+    config.loadfile = result["load-file"].as<bool>();
+    config.inputfile = result["input"].as<string>();
+    config.noindex = result["no-index"].as<bool>();
+    config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
+    config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
     config.includetypes = result["include-type"].as<std::vector<std::string>>();
     config.ignorecase = result["case-insensitive"].as<bool>();
     std::string debugfilestr, outputfilestr, rootdiropt;
@@ -374,10 +364,8 @@ int main(int argc, char *argv[]) {
     debugfilestr = result["debug"].as<std::string>();
     config.debug.open(debugfilestr, std::ios::out);
     cout << "Output file = " << outputfilestr << endl;
-    const char* rootdirstr;
-    //rootdiropt = result["root-dir"].as<std::string>();
 
-    std::for_each(rootdirs.begin(), rootdirs.end(), [outputfilestr, &filemap, &excludedirs, &config, &noindex](string rootdiropt)
+    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [outputfilestr, &config](string rootdiropt)
         {
             cout << "Rootdir = " << rootdiropt << endl;
             if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
@@ -391,12 +379,12 @@ int main(int argc, char *argv[]) {
 
             cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
 
-            if (!noindex)
+            if (!(config.noindex))
             {
-                if (!(out.is_open()))
-                    out.open(outputfilestr, std::ios::out);
-                getDirectory(rootdir, 0, filemap, excludedirs, config);
-                cout << "Number of elements generated for (" << rootdir << ") : " << filemap->size() << endl;
+                if (!(config.out.is_open()))
+                    config.out.open(outputfilestr, std::ios::out);
+                getDirectory(rootdir, 0, config);
+                cout << "Number of elements generated for (" << rootdir << ") : " << config.filemap->size() << endl;
             }
         });
     
@@ -405,24 +393,24 @@ int main(int argc, char *argv[]) {
     {
         config.debug.close();
     }
-    if (out.is_open())
+    if (config.out.is_open())
     {
-        out.close();
+        config.out.close();
     }
-    in.open(outputfilestr, std::ios::in );
+   // in.open(outputfilestr, std::ios::in );
 
     std::vector<filedata> data;
 
-    filemap->clear();
-    if (loadfile)
+    config.filemap->clear();
+    if (config.loadfile)
     {
-        cout << "Loading file " << inputfile << "..." << endl;
-        loadTree(filemap, config.maxfilesize, config.minfilesize, inputfile);
-        cout << "Loaded file.";
+        cout << "Loading file " << config.inputfile << "..." << endl;
+        loadTree(config.filemap, config.maxfilesize, config.minfilesize, config.inputfile);
+        cout << "Loaded file (" << config.filemap->size() << " items)";
     }
 
-    filemap->clear();
-    delete (filemap);
-    filemap = nullptr;
+    config.filemap->clear();
+    delete (config.filemap);
+    config.filemap = nullptr;
     return 0;
 }
