@@ -145,10 +145,12 @@ unsigned long getFileSize(const string& fullpath)
 {
     struct stat filestat;
     int result;
+    /*
     std::ifstream file(fullpath);
     file.seekg(0, file.end);
     unsigned long length = file.tellg();
     file.close();
+    */
     result = stat(fullpath.c_str(), &filestat);
     return filestat.st_size;
 }
