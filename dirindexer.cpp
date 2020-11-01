@@ -39,6 +39,8 @@ struct configdata {
     std::string                 inputfile;
     bool                        loadfile = false;
     bool                        noindex = false;
+    std::string                 outputfilestr;
+    std::string                 debugfilestr;
 };
 
 std::ostream& operator << (std::ostream& os, const filedata& fileobject)
@@ -321,6 +323,29 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
     return 0;
 }
 
+int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config)
+{
+    config.maxfilesize = result["max-size"].as<long long>();
+    config.minfilesize = result["min-size"].as<long long>();
+    config.loadfile = result["load-file"].as<bool>();
+    config.inputfile = result["input"].as<string>();
+    config.noindex = result["no-index"].as<bool>();
+    config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
+    config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
+    config.includetypes = result["include-type"].as<std::vector<std::string>>();
+    config.ignorecase = result["case-insensitive"].as<bool>();
+    config.outputfilestr = result["output"].as<std::string>();
+    config.debugfilestr = result["debug"].as<std::string>();
+    config.debug.open(config.debugfilestr, std::ios::out);
+    if (result.count("help"))
+    {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
+    config.filemap = new std::map<string, filedata>;
+
+    return 1;
+}
 int main(int argc, char *argv[]) {
     struct configdata config;
 
@@ -342,30 +367,12 @@ int main(int argc, char *argv[]) {
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
         ;
     auto result = options.parse(argc, argv);
-    config.filemap = new std::map<string, filedata>;
-    config.maxfilesize = result["max-size"].as<long long>();
-    config.minfilesize = result["min-size"].as<long long>();
-    config.loadfile = result["load-file"].as<bool>();
-    config.inputfile = result["input"].as<string>();
-    config.noindex = result["no-index"].as<bool>();
-    config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
-    config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
-    config.includetypes = result["include-type"].as<std::vector<std::string>>();
-    config.ignorecase = result["case-insensitive"].as<bool>();
-    std::string debugfilestr, outputfilestr, rootdiropt;
+    loadConfig(options, result, config);
+    std::string rootdiropt;
 
-    if (result.count("help"))
-    {
-        std::cout << options.help() << std::endl;
-        exit(0);
-    }
+    cout << "Output file = " << config.outputfilestr << endl;
 
-    outputfilestr = result["output"].as<std::string>();
-    debugfilestr = result["debug"].as<std::string>();
-    config.debug.open(debugfilestr, std::ios::out);
-    cout << "Output file = " << outputfilestr << endl;
-
-    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [outputfilestr, &config](string rootdiropt)
+    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config](string rootdiropt)
         {
             cout << "Rootdir = " << rootdiropt << endl;
             if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
@@ -382,12 +389,11 @@ int main(int argc, char *argv[]) {
             if (!(config.noindex))
             {
                 if (!(config.out.is_open()))
-                    config.out.open(outputfilestr, std::ios::out);
+                    config.out.open(config.outputfilestr, std::ios::out);
                 getDirectory(rootdir, 0, config);
                 cout << "Number of elements generated for (" << rootdir << ") : " << config.filemap->size() << endl;
             }
         });
-    
     
     if (config.debug.is_open())
     {
@@ -397,9 +403,6 @@ int main(int argc, char *argv[]) {
     {
         config.out.close();
     }
-   // in.open(outputfilestr, std::ios::in );
-
-    std::vector<filedata> data;
 
     config.filemap->clear();
     if (config.loadfile)
