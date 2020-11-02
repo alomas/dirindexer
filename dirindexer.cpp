@@ -179,7 +179,67 @@ bool isFile(dirent* entry)
     
     return true;
 }
+bool depthSkipDir(std::string str, bool skipdir, int depth, struct dirent* entry)
+{
+    string depthstr, excludestr;
+    size_t nPos;
+    bool anydepth;
+    int excludedepth;
+    nPos = str.find("?", 0);
+    if (nPos == -1)
+    {
+        anydepth = true;
+        excludestr = str;
+    }
+    else
+    {
+        anydepth = false;
+        excludestr = str.substr(0, nPos);
+        depthstr = str.substr(nPos + 1, string::npos);
+        excludedepth = stoi(depthstr);
+    }
 
+    bool depthtest = false;
+    bool comparetest = false;
+    if ((anydepth == true) || (excludedepth == depth))
+        depthtest = true;
+    if ((excludestr.compare(entry->d_name) == 0))
+        comparetest = true;
+    if (depthtest && comparetest)
+    {
+        skipdir = true;
+    }
+
+    return false;
+}
+
+bool extSkipFile(struct configdata &config, std::string str, bool skipfile, bool alreadymatched, struct dirent* entry)
+{
+    string fileext, includeextupper, fileextupper;
+    string filename = entry->d_name;
+    size_t found = filename.find_last_of('.');
+    fileext = filename.substr(found + 1);
+    fileextupper = fileext;
+    includeextupper = str;
+    std::transform(fileextupper.begin(), fileextupper.end(), fileextupper.begin(),
+        [](unsigned char c) { return std::toupper(c); });
+    std::transform(includeextupper.begin(), includeextupper.end(), includeextupper.begin(),
+        [](unsigned char c) { return std::toupper(c); });
+    if (
+        (config.ignorecase && (includeextupper.compare(fileextupper) == 0))
+        || (!(config.ignorecase) && (str.compare(fileext) == 0)))
+    {
+        skipfile = false;
+        alreadymatched = true;
+    }
+    else
+    {
+        if (!(alreadymatched))
+            skipfile = true;
+    }
+    return skipfile;
+
+}
 int getDirectory(const char *rootdir, int depth, struct configdata &config)
 {
     struct dirent *entry;
@@ -221,39 +281,12 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
                     
                     std::for_each(config.excludedirs.begin(), config.excludedirs.end(), [entry, &skipdir, depth](const string str)
                         {
-                            string depthstr, excludestr;
-                            size_t nPos;
-                            bool anydepth;
-                            int excludedepth;
-                            nPos = str.find("?", 0);
-                            if (nPos == -1)
-                            {
-                                anydepth = true;
-                                excludestr = str;
-                            }
-                            else
-                            {
-                                anydepth = false;
-                                excludestr = str.substr(0, nPos);
-                                depthstr = str.substr(nPos + 1, string::npos);
-                                excludedepth = stoi(depthstr);
-                            }
-
-                            bool depthtest = false;
-                            bool comparetest = false;
-                            if ((anydepth == true) || (excludedepth == depth))
-                                depthtest = true;
-                            if ((excludestr.compare(entry->d_name) == 0))
-                                comparetest = true;
-                            if ( depthtest && comparetest)
-                            {
-                                skipdir = true;
-                            }
+                            skipdir = depthSkipDir(str, skipdir, depth, entry);
                         });
 
                     if (!skipdir)
                     {
-                        if ((config.maxdepth != -1) && (depth < config.maxdepth))
+                        if ((config.maxdepth == -1) || (depth < config.maxdepth))
                             getDirectory(oss.str().c_str(), depth, config);
                     }
                 }
@@ -268,28 +301,7 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
                         bool alreadymatched = false;
                         std::for_each(config.includetypes.begin(), config.includetypes.end(), [&config, &alreadymatched, entry, &skipfile](const string str)
                             {
-                                string fileext, includeextupper, fileextupper;
-                                string filename = entry->d_name;
-                                size_t found = filename.find_last_of('.');
-                                fileext = filename.substr(found + 1);
-                                fileextupper = fileext;
-                                includeextupper = str;
-                                std::transform(fileextupper.begin(), fileextupper.end(), fileextupper.begin(),
-                                    [](unsigned char c) { return std::toupper(c); });
-                                std::transform(includeextupper.begin(), includeextupper.end(), includeextupper.begin(),
-                                    [](unsigned char c) { return std::toupper(c); });
-                                if (
-                                    (config.ignorecase && (includeextupper.compare(fileextupper) == 0))
-                                 || (!(config.ignorecase) && (str.compare(fileext) == 0)))
-                                {
-                                    skipfile = false;
-                                    alreadymatched = true;
-                                }
-                                else
-                                {
-                                    if (!(alreadymatched))
-                                        skipfile = true;
-                                }
+                                skipfile = extSkipFile(config, str, skipfile, alreadymatched, entry);
                             });
                         if (!skipfile)
                         {
