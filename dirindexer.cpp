@@ -9,7 +9,6 @@
 #include <dirent.h>
 #endif
 
-#include <sstream>
 #include <cstring>
 #include <map>
 #include <iterator>
@@ -28,7 +27,6 @@ struct filedata {
 struct configdata {
     std::fstream                debug;
     std::fstream                out; // Output file stream
-    std::fstream                in;  // Input file stream
     std::vector<std::string>    rootdirs;
     std::vector<std::string>    excludedirs;
     std::vector<std::string>    includetypes;
@@ -36,7 +34,7 @@ struct configdata {
     long long                   maxfilesize = -1;
     long long                   minfilesize = -1;
     int                         maxdepth = -1;
-    std::map<std::string, filedata>* filemap = NULL;
+    std::map<std::string, filedata>* filemap = nullptr;
     std::string                 inputfile;
     bool                        loadfile = false;
     bool                        noindex = false;
@@ -108,7 +106,7 @@ string getMD5(const char *fullpath, struct configdata &config)
     return md5;
 }
 
-int loadTree(std::map<string, filedata>* filemap, long long maxfilesize, long long minfilesize, string filename)
+int loadTree(std::map<string, filedata>* filemap, const string& filename)
 {
     filedata rec;
     string filesizestr;
@@ -137,23 +135,24 @@ int loadTree(std::map<string, filedata>* filemap, long long maxfilesize, long lo
 
 #if _WIN64
 #define stat _stat64
-#else
+#elif !defined(__APPLE__)
+    #include <sys/stat.h>
+    #define stat stat64
+#endif
+#if defined(__APPLE__)
 #include <sys/stat.h>
-#define stat stat64
 #endif
 
-unsigned long getFileSize(const string& fullpath)
+long long getFileSize(const string& fullpath)
 {
-    struct stat filestat;
+    struct stat filestat{};
     int result;
-    /*
-    std::ifstream file(fullpath);
-    file.seekg(0, file.end);
-    unsigned long length = file.tellg();
-    file.close();
-    */
+
     result = stat(fullpath.c_str(), &filestat);
-    return filestat.st_size;
+    if (result == 0)
+        return filestat.st_size;
+    else
+        return 0;
 }
 
 bool isFile(dirent* entry)
@@ -174,18 +173,15 @@ bool isFile(dirent* entry)
     {
         return false;
     }
-    cout << "Not windows" << endl;
     #endif
-    
-    return true;
 }
-bool depthSkipDir(std::string str, bool skipdir, int depth, struct dirent* entry)
+bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry)
 {
     string depthstr, excludestr;
     size_t nPos;
     bool anydepth;
     int excludedepth;
-    nPos = str.find("?", 0);
+    nPos = str.find('?', 0);
     if (nPos == -1)
     {
         anydepth = true;
@@ -201,19 +197,19 @@ bool depthSkipDir(std::string str, bool skipdir, int depth, struct dirent* entry
 
     bool depthtest = false;
     bool comparetest = false;
-    if ((anydepth == true) || (excludedepth == depth))
+    if (anydepth || (excludedepth == depth))
         depthtest = true;
-    if ((excludestr.compare(entry->d_name) == 0))
+    if (excludestr == entry->d_name)
         comparetest = true;
     if (depthtest && comparetest)
     {
         skipdir = true;
     }
 
-    return false;
+    return skipdir;
 }
 
-bool extSkipFile(struct configdata &config, std::string str, bool skipfile, bool alreadymatched, struct dirent* entry)
+bool extSkipFile(struct configdata &config, const std::string& str, bool skipfile, bool &alreadymatched, struct dirent* entry)
 {
     string fileext, includeextupper, fileextupper;
     string filename = entry->d_name;
@@ -226,8 +222,8 @@ bool extSkipFile(struct configdata &config, std::string str, bool skipfile, bool
     std::transform(includeextupper.begin(), includeextupper.end(), includeextupper.begin(),
         [](unsigned char c) { return std::toupper(c); });
     if (
-        (config.ignorecase && (includeextupper.compare(fileextupper) == 0))
-        || (!(config.ignorecase) && (str.compare(fileext) == 0)))
+        (config.ignorecase && (includeextupper == fileextupper))
+        || (!(config.ignorecase) && (str == fileext)))
     {
         skipfile = false;
         alreadymatched = true;
@@ -279,7 +275,7 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
                     bool skipdir = false;
                     string temppath;
                     
-                    std::for_each(config.excludedirs.begin(), config.excludedirs.end(), [entry, &skipdir, depth](const string str)
+                    std::for_each(config.excludedirs.begin(), config.excludedirs.end(), [entry, &skipdir, depth](const string& str)
                         {
                             skipdir = depthSkipDir(str, skipdir, depth, entry);
                         });
@@ -299,7 +295,7 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
                         else
                             skipfile = true;
                         bool alreadymatched = false;
-                        std::for_each(config.includetypes.begin(), config.includetypes.end(), [&config, &alreadymatched, entry, &skipfile](const string str)
+                        std::for_each(config.includetypes.begin(), config.includetypes.end(), [&config, &alreadymatched, entry, &skipfile](const string &str)
                             {
                                 skipfile = extSkipFile(config, str, skipfile, alreadymatched, entry);
                             });
@@ -426,7 +422,7 @@ int main(int argc, char *argv[]) {
     if (config.loadfile)
     {
         cout << "Loading file " << config.inputfile << "..." << endl;
-        loadTree(config.filemap, config.maxfilesize, config.minfilesize, config.inputfile);
+        loadTree(config.filemap, config.inputfile);
         cout << "Loaded file (" << config.filemap->size() << " items)";
     }
 
