@@ -26,6 +26,6 @@ if (UNIX)
 	link_libraries(crypto)
 endif (UNIX)
 
-add_executable(dirindexer dirindexer.cpp)
+add_executable(dirindexer dirshared.cpp dirindexer.cpp dirshared.h)
 
 

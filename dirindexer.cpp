@@ -14,33 +14,9 @@
 #include <iterator>
 #include <fstream>
 #include <openssl/md5.h>
+#include "dirshared.h"
 
 using namespace std;
-
-struct filedata {
-    string filename;
-    string fullpath;
-    long long filesize{};
-    string md5;
-};
-
-struct configdata {
-    std::fstream                debug;
-    std::fstream                out; // Output file stream
-    std::vector<std::string>    rootdirs;
-    std::vector<std::string>    excludedirs;
-    std::vector<std::string>    includetypes;
-    bool                        ignorecase = false;
-    long long                   maxfilesize = -1;
-    long long                   minfilesize = -1;
-    int                         maxdepth = -1;
-    std::map<std::string, filedata>* filemap = nullptr;
-    std::string                 inputfile;
-    bool                        loadfile = false;
-    bool                        noindex = false;
-    std::string                 outputfilestr;
-    std::string                 debugfilestr;
-};
 
 std::ostream& operator << (std::ostream& os, const filedata& fileobject)
 {
@@ -73,37 +49,6 @@ std::istream& operator >> (std::stringstream& os, filedata& fileobject)
         fileobject.filesize = std::stoll(filesizestr);
     std::getline(os, fileobject.md5);
     return os;
-}
-string getMD5(const char *fullpath, struct configdata &config)
-{
-    MD5_CTX mdContext;
-    size_t bytes;
-    unsigned char data[8192];
-    int i;
-    unsigned char checksum[MD5_DIGEST_LENGTH];
-    FILE *inFile = fopen ((const char *) fullpath, "rb");
-
-    if (inFile == nullptr)
-    {
-        return string("00000000000000000000000000000000");
-    }
-    MD5_Init (&mdContext);
-    while ((bytes = fread (data, 1, 8192, inFile)) != 0)
-        MD5_Update (&mdContext, data, bytes);
-    MD5_Final (checksum,&mdContext);
-    stringstream oss;
-    for(i = 0; i < MD5_DIGEST_LENGTH; i++)
-    {
-        printf("%02x", checksum[i]);
-        oss << std::right << setw(2) << std::setfill('0') << std::hex << (short)checksum[i];
-        string thestring = oss.str();
-    }
-    printf (" %s\n", fullpath);
-    (config.debug) << oss.str() << " " << fullpath << endl;
-    fclose (inFile);
-    string md5;
-    md5 = oss.str();
-    return md5;
 }
 
 int loadTree(std::map<string, filedata>* filemap, const string& filename)
