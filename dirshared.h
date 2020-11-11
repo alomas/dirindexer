@@ -5,6 +5,26 @@
 
 #include <cstring>
 #include <vector>
+#include <include/cxxopts.hpp>
+
+#if _WIN64 || _WIN32
+#include <include/dirent.h>
+#endif
+
+#if !defined(_WIN64) && !defined(_WIN32)
+#include <dirent.h>
+#endif
+
+#if _WIN64
+#define stat _stat64
+#elif !defined(__APPLE__)
+#include <sys/stat.h>
+    #define stat stat64
+#endif
+#if defined(__APPLE__)
+#include <sys/stat.h>
+#endif
+
 using namespace std;
 
 struct filedata {
@@ -33,3 +53,10 @@ struct configdata {
 };
 
 string getMD5(const char *fullpath, struct configdata &config);
+int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config);
+long long getFileSize(const string& fullpath);
+int loadTree(std::map<string, filedata>* filemap, const string& filename);
+int getDirectory(const char *rootdir, int depth, struct configdata &config);
+bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry);
+bool isFile(dirent* entry);
+bool extSkipFile(struct configdata &config, const std::string& str, bool skipfile, bool &alreadymatched, struct dirent* entry);
