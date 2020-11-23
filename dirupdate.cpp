@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     {
         config.out.close();
     }
-    
+
     config.filemap->clear();
     delete (config.filemap);
     config.filemap = nullptr;
