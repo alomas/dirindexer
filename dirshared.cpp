@@ -240,7 +240,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.minfilesize = result["min-size"].as<long long>();
     config.maxdepth = result["max-depth"].as<int>();
     config.loadfile = result["load-file"].as<bool>();
-    config.inputfile = result["input"].as<string>();
+    config.inputfilestr = result["input"].as<string>();
     config.noindex = result["no-index"].as<bool>();
     config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
     config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();

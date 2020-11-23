@@ -27,5 +27,6 @@ if (UNIX)
 endif (UNIX)
 
 add_executable(dirindexer dirshared.cpp dirindexer.cpp dirshared.h)
+add_executable(dirupdate dirshared.cpp dirshared.h dirupdate.cpp)
 
 
