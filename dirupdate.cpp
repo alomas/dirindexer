@@ -8,7 +8,6 @@
 #include <dirent.h>
 #endif
 
-#include <cstring>
 #include <map>
 #include <iterator>
 #include <fstream>
@@ -48,7 +47,7 @@ int main(int argc, char *argv[]) {
     {
         cout << "Loading file " << config.inputfilestr << "..." << endl;
         loadTree(config.filemap, config.inputfilestr);
-        cout << "Loaded file (" << config.filemap->size() << " items)";
+        cout << "Loaded file (" << config.filemap->size() << " items)" << endl;
     }
 
     std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config](string rootdiropt)
@@ -82,9 +81,7 @@ int main(int argc, char *argv[]) {
     {
         config.out.close();
     }
-
-
-
+    
     config.filemap->clear();
     delete (config.filemap);
     config.filemap = nullptr;

@@ -80,9 +80,9 @@ int main(int argc, char *argv[]) {
     config.filemap->clear();
     if (config.loadfile)
     {
-        cout << "Loading file " << config.inputfile << "..." << endl;
-        loadTree(config.filemap, config.inputfile);
-        cout << "Loaded file (" << config.filemap->size() << " items)";
+        cout << "Loading file " << config.inputfilestr << "..." << endl;
+        loadTree(config.filemap, config.inputfilestr);
+        cout << "Loaded file (" << config.filemap->size() << " items)" << endl;
     }
 
     config.filemap->clear();
