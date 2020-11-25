@@ -44,7 +44,8 @@ struct configdata {
     long long                   maxfilesize = -1;
     long long                   minfilesize = -1;
     int                         maxdepth = -1;
-    std::map<std::string, filedata>* filemap = nullptr;
+    std::map<std::string, filedata>* indexmap = nullptr;
+    std::map<std::string, filedata>* loadmap = nullptr;
     std::string                 inputfilestr;
     bool                        loadfile = false;
     bool                        noindex = false;

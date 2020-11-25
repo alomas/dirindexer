@@ -220,7 +220,7 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
                                 )
                         {
                             fileobject.md5 = string(getMD5(fileobject.fullpath.c_str(), config));
-                            config.filemap->insert(std::make_pair(oss.str(), fileobject));
+                            config.indexmap->insert(std::make_pair(oss.str(), fileobject));
                             if (config.out.is_open())
                                 config.out << fileobject;
                         }
@@ -254,7 +254,8 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
         std::cout << options.help() << std::endl;
         exit(0);
     }
-    config.filemap = new std::map<string, filedata>;
+    config.indexmap = new std::map<string, filedata>;
+    config.loadmap = new std::map<string, filedata>;
 
     return 1;
 }

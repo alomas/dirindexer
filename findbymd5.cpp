@@ -1,3 +1,4 @@
+#include "findbymd5.h"
 #include <iostream>
 #include <include/cxxopts.hpp>
 #if _WIN64 || _WIN32
@@ -18,9 +19,9 @@ using namespace std;
 int main(int argc, char *argv[]) {
     struct configdata config;
 
-    std::cout << "DirUpdate v0.01 alpha" << endl;
+    std::cout << "FindByMd5 v0.01 alpha" << endl;
 
-    cxxopts::Options options("DirIndexer", "Index a file system.");
+    cxxopts::Options options("FindByMd5", "Find a file by md5 checksum.");
     options.add_options()
             ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
             ("r,root-dirs", "Root Directory(ies)", cxxopts::value<std::vector<std::string>>()->default_value("."))
@@ -42,12 +43,12 @@ int main(int argc, char *argv[]) {
 
     cout << "Input file = " << config.inputfilestr << endl;
     cout << "Output file = " << config.outputfilestr << endl;
-    config.indexmap->clear();
+    config.loadmap->clear();
     if (config.loadfile)
     {
         cout << "Loading file " << config.inputfilestr << "..." << endl;
-        loadTree(config.indexmap, config.inputfilestr);
-        cout << "Loaded file (" << config.indexmap->size() << " items)" << endl;
+        loadTree(config.loadmap, config.inputfilestr);
+        cout << "Loaded file (" << config.loadmap->size() << " items)" << endl;
     }
 
     std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config](string rootdiropt)

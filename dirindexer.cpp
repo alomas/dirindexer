@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
                 if (!(config.out.is_open()))
                     config.out.open(config.outputfilestr, std::ios::out);
                 getDirectory(rootdir, 0, config);
-                cout << "Number of elements generated for (" << rootdir << ") : " << config.filemap->size() << endl;
+                cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
             }
         });
 
@@ -77,16 +77,16 @@ int main(int argc, char *argv[]) {
         config.out.close();
     }
 
-    config.filemap->clear();
+    config.indexmap->clear();
     if (config.loadfile)
     {
         cout << "Loading file " << config.inputfilestr << "..." << endl;
-        loadTree(config.filemap, config.inputfilestr);
-        cout << "Loaded file (" << config.filemap->size() << " items)" << endl;
+        loadTree(config.indexmap, config.inputfilestr);
+        cout << "Loaded file (" << config.indexmap->size() << " items)" << endl;
     }
 
-    config.filemap->clear();
-    delete (config.filemap);
-    config.filemap = nullptr;
+    config.indexmap->clear();
+    delete (config.indexmap);
+    config.indexmap = nullptr;
     return 0;
 }
