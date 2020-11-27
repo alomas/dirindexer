@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
             ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
             ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
             ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
+            ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
             ("t,include-type", "Include file extensions (iso,txt,pdf)", cxxopts::value<std::vector<std::string>>()->default_value(""))
             ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3[?<level>])", cxxopts::value<std::vector<std::string>>()->default_value(""))
             ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
@@ -47,7 +48,7 @@ int main(int argc, char *argv[]) {
     if (config.loadfile)
     {
         cout << "Loading file " << config.inputfilestr << "..." << endl;
-        loadTree(config.loadmap, config.inputfilestr);
+        loadTreebyMD5(config.loadmap, config.inputfilestr, config);
         cout << "Loaded file (" << config.loadmap->size() << " items)" << endl;
     }
 
@@ -71,6 +72,34 @@ int main(int argc, char *argv[]) {
                 config.out.open(config.outputfilestr, std::ios::out);
             getDirectory(rootdir, 0, config);
             cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
+            map<string, filedata> *indexmap;
+            map<string, filedata> *loadmap;
+            filedata fileobject;
+            indexmap = config.indexmap;
+            loadmap = config.loadmap;
+            // map<string, filedata> &item;
+            //item = indexmap[1];
+            std::for_each(indexmap->begin(), indexmap->end(), [loadmap](std::pair<string,filedata> item)
+            {
+                //cout << item.second.md5 << ": " << item.second.fullpath << endl;
+                auto pairmd5 = loadmap->find(item.second.md5);
+
+                if (pairmd5 == loadmap->end())
+                {
+                    cout  << "Missing: " << item.second.fullpath << endl;
+                }
+                else
+                {
+                    cout  << "Match: " << item.second.fullpath <<
+                    " is " << pairmd5->second.fullpath << endl;
+                }
+            }
+            );
+
+            auto pair = indexmap->find("./debug.log");
+
+            cout << "hi";
+
         }
     });
 

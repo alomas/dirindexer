@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
         ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
         ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
         ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
+        ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
         ("t,include-type", "Include file extensions (iso,txt,pdf)", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3[?<level>])", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
@@ -81,7 +82,7 @@ int main(int argc, char *argv[]) {
     if (config.loadfile)
     {
         cout << "Loading file " << config.inputfilestr << "..." << endl;
-        loadTree(config.indexmap, config.inputfilestr);
+        loadTree(config.indexmap, config.inputfilestr, config);
         cout << "Loaded file (" << config.indexmap->size() << " items)" << endl;
     }
 

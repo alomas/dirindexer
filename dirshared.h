@@ -51,12 +51,14 @@ struct configdata {
     bool                        noindex = false;
     std::string                 outputfilestr;
     std::string                 debugfilestr;
+    bool                        verbose;
 };
 
 string getMD5(const char *fullpath, struct configdata &config);
 int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config);
 long long getFileSize(const string& fullpath);
-int loadTree(std::map<string, filedata>* filemap, const string& filename);
+int loadTree(std::map<string, filedata>* filemap, const string& filename, configdata &config);
+int loadTreebyMD5(std::map<string, filedata>* filemap, const string& filename, configdata &config);
 int getDirectory(const char *rootdir, int depth, struct configdata &config);
 bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry);
 bool isFile(dirent* entry);

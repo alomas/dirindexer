@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     if (config.loadfile)
     {
         cout << "Loading file " << config.inputfilestr << "..." << endl;
-        loadTree(config.indexmap, config.inputfilestr);
+        loadTree(config.indexmap, config.inputfilestr, config);
         cout << "Loaded file (" << config.indexmap->size() << " items)" << endl;
     }
 
