@@ -55,7 +55,6 @@ struct configdata {
 };
 
 string getMD5(const char *fullpath, struct configdata &config);
-int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config);
 long long getFileSize(const string& fullpath);
 int loadTree(std::map<string, filedata>* filemap, const string& filename, configdata &config);
 int loadTreebyMD5(std::map<string, filedata>* filemap, const string& filename, configdata &config);

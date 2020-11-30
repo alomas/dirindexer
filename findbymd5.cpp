@@ -16,6 +16,33 @@
 
 using namespace std;
 
+int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config)
+{
+    config.maxfilesize = result["max-size"].as<long long>();
+    config.minfilesize = result["min-size"].as<long long>();
+    config.maxdepth = result["max-depth"].as<int>();
+    config.loadfile = result["load-file"].as<bool>();
+    config.verbose = result["verbose"].as<bool>();
+    config.inputfilestr = result["input"].as<string>();
+    config.noindex = result["no-index"].as<bool>();
+    config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
+    config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
+    config.includetypes = result["include-type"].as<std::vector<std::string>>();
+    config.ignorecase = result["case-insensitive"].as<bool>();
+    config.outputfilestr = result["output"].as<std::string>();
+    config.debugfilestr = result["debug"].as<std::string>();
+    config.debug.open(config.debugfilestr, std::ios::out);
+    if (result.count("help"))
+    {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
+    config.indexmap = new std::map<string, filedata>;
+    config.loadmap = new std::map<string, filedata>;
+
+    return 1;
+}
+
 int main(int argc, char *argv[]) {
     struct configdata config;
 
@@ -31,6 +58,7 @@ int main(int argc, char *argv[]) {
             ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
             ("c,case-insensitive", "Ignore case in exclude/include", cxxopts::value<bool>()->default_value("false"))
             ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
+            ("s,source-input", "Source Input filename (This is list of hashes you want to find in the destination input file)", cxxopts::value<std::string>()->default_value("./src-input.txt"))
             ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
             ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
             ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
