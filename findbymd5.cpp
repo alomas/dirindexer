@@ -112,8 +112,6 @@ int main(int argc, char *argv[]) {
         {
             if (!(config.out.is_open()))
                 config.out.open(config.outputfilestr, std::ios::out);
-            getDirectory(rootdir, 0, config);
-            cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
             map<string, filedata> *indexmap;
             map<string, filedata> *loadmap;
             filedata fileobject;
@@ -126,6 +124,8 @@ int main(int argc, char *argv[]) {
             {
                 cout << "Using local dir index map" << endl;
                 indexmap = config.indexmap;
+                getDirectory(rootdir, 0, config);
+                cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
             }
             loadmap = config.loadsrcmap;
             // map<string, filedata> &item;
