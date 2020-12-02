@@ -24,6 +24,13 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.loadfile = result["load-file"].as<bool>();
     config.verbose = result["verbose"].as<bool>();
     config.inputfilestr = result["input"].as<string>();
+    config.srcinputfilestr = result["src-input"].as<string>();
+    config.dstinputfilestr = result["dst-input"].as<string>();
+    if (result.count("dst-input"))
+    {
+        std::cout << "Using dst-input file " << config.dstinputfilestr << " (not indexing local folder)" << endl;
+        config.usedstinputfile = true;
+    }
     config.noindex = result["no-index"].as<bool>();
     config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
     config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
@@ -38,13 +45,16 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
         exit(0);
     }
     config.indexmap = new std::map<string, filedata>;
-    config.loadmap = new std::map<string, filedata>;
+    config.loadsrcmap = new std::map<string, filedata>;
+    config.loaddstmap = new std::map<string, filedata>;
 
     return 1;
 }
 
 int main(int argc, char *argv[]) {
     struct configdata config;
+    int matchedfiles = 0;
+    int missingfiles = 0;
 
     std::cout << "FindByMd5 v0.01 alpha" << endl;
 
@@ -58,7 +68,8 @@ int main(int argc, char *argv[]) {
             ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
             ("c,case-insensitive", "Ignore case in exclude/include", cxxopts::value<bool>()->default_value("false"))
             ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
-            ("s,source-input", "Source Input filename (This is list of hashes you want to find in the destination input file)", cxxopts::value<std::string>()->default_value("./src-input.txt"))
+            ("dst-input", "Destination Input filename (This contains your source-of-truth hashes you want to search)", cxxopts::value<std::string>()->default_value("./dst-input.txt"))
+            ("src-input", "Source Input filename (This is list of hashes you want to find in the destination input file)", cxxopts::value<std::string>()->default_value("./src-input.txt"))
             ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
             ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
             ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
@@ -72,15 +83,18 @@ int main(int argc, char *argv[]) {
 
     cout << "Input file = " << config.inputfilestr << endl;
     cout << "Output file = " << config.outputfilestr << endl;
-    config.loadmap->clear();
+    config.loadsrcmap->clear();
     if (config.loadfile)
     {
-        cout << "Loading file " << config.inputfilestr << "..." << endl;
-        loadTreebyMD5(config.loadmap, config.inputfilestr, config);
-        cout << "Loaded file (" << config.loadmap->size() << " items)" << endl;
+        cout << "Loading src file " << config.srcinputfilestr << "..." << endl;
+        loadTreebyMD5(config.loadsrcmap, config.srcinputfilestr, config);
+        cout << "Loaded file (" << config.loadsrcmap->size() << " items)" << endl;
+        cout << "Loading dst file " << config.dstinputfilestr << "..." << endl;
+        loadTreebyMD5(config.loaddstmap, config.dstinputfilestr, config);
+        cout << "Loaded file (" << config.loaddstmap->size() << " items)" << endl;
     }
 
-    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config](string rootdiropt)
+    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config, &missingfiles, &matchedfiles](string rootdiropt)
     {
         cout << "Rootdir = " << rootdiropt << endl;
         if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
@@ -103,11 +117,20 @@ int main(int argc, char *argv[]) {
             map<string, filedata> *indexmap;
             map<string, filedata> *loadmap;
             filedata fileobject;
-            indexmap = config.indexmap;
-            loadmap = config.loadmap;
+            if (config.usedstinputfile)
+            {
+                cout << "Using dst-input file map" << endl;
+                indexmap = config.loaddstmap;
+            }
+            else
+            {
+                cout << "Using local dir index map" << endl;
+                indexmap = config.indexmap;
+            }
+            loadmap = config.loadsrcmap;
             // map<string, filedata> &item;
             //item = indexmap[1];
-            std::for_each(indexmap->begin(), indexmap->end(), [loadmap](std::pair<string,filedata> item)
+            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &missingfiles, &matchedfiles](std::pair<string,filedata> item)
             {
                 //cout << item.second.md5 << ": " << item.second.fullpath << endl;
                 auto pairmd5 = loadmap->find(item.second.md5);
@@ -115,21 +138,23 @@ int main(int argc, char *argv[]) {
                 if (pairmd5 == loadmap->end())
                 {
                     cout  << "Missing: " << item.second.fullpath << endl;
+                    missingfiles++;
                 }
                 else
                 {
                     cout  << "Match: " << item.second.fullpath <<
                     " is " << pairmd5->second.fullpath << endl;
+                    matchedfiles++;
                 }
             }
             );
 
             auto pair = indexmap->find("./debug.log");
 
-            cout << "hi";
-
         }
     });
+    cout << "Matched files: " << matchedfiles << endl;
+    cout << "Missing files: " << missingfiles << endl;
 
     if (config.debug.is_open())
     {

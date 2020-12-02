@@ -40,7 +40,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
         exit(0);
     }
     config.indexmap = new std::map<string, filedata>;
-    config.loadmap = new std::map<string, filedata>;
+    config.loadsrcmap = new std::map<string, filedata>;
 
     return 1;
 }
