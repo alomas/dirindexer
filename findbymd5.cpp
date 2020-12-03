@@ -48,9 +48,9 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
         std::cout << options.help() << std::endl;
         exit(0);
     }
-    config.indexmap = new std::map<string, filedata>;
-    config.loadsrcmap = new std::map<string, filedata>;
-    config.loaddstmap = new std::map<string, filedata>;
+    config.indexmap = new std::multimap<string, filedata>;
+    config.loadsrcmap = new std::multimap<string, filedata>;
+    config.loaddstmap = new std::multimap<string, filedata>;
 
     return 1;
 }
@@ -118,8 +118,8 @@ int main(int argc, char *argv[]) {
         {
             if (!(config.out.is_open()))
                 config.out.open(config.outputfilestr, std::ios::out);
-            map<string, filedata> *indexmap;
-            map<string, filedata> *loadmap;
+            multimap<string, filedata> *indexmap;
+            multimap<string, filedata> *loadmap;
             filedata fileobject;
             if (config.usedstinputfile)
             {

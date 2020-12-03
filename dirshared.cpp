@@ -252,7 +252,7 @@ long long getFileSize(const string& fullpath)
 }
 
 
-int loadTree(std::map<string, filedata>* filemap, const string& filename, configdata &config)
+int loadTree(std::multimap<string, filedata>* filemap, const string& filename, configdata &config)
 {
     filedata rec;
     string filesizestr;
@@ -282,7 +282,7 @@ int loadTree(std::map<string, filedata>* filemap, const string& filename, config
 
 }
 
-int loadTreebyMD5(std::map<string, filedata>* filemap, const string& filename, configdata &config)
+int loadTreebyMD5(std::multimap<string, filedata>* filemap, const string& filename, configdata &config)
 {
     filedata rec;
     string filesizestr;
