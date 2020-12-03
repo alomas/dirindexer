@@ -141,6 +141,13 @@ int main(int argc, char *argv[]) {
                 //cout << item.second.md5 << ": " << item.second.fullpath << endl;
                 auto pairmd5 = loadmap->find(item.second.md5);
 
+                std::pair<std::multimap<std::string, filedata>::iterator,
+                    std::multimap<std::string, filedata>::iterator> md5map = loadmap->equal_range(item.second.md5);
+                for (std::multimap<std::string, filedata>::iterator it = md5map.first; it!=md5map.second; ++it)
+                {
+                    cout << "Found " << it->second.md5 << " " << it->second.fullpath;
+                    cout <<endl;
+                }
                 if (pairmd5 == loadmap->end())
                 {
                     cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
