@@ -18,6 +18,33 @@
 
 using namespace std;
 
+int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config)
+{
+    config.maxfilesize = result["max-size"].as<long long>();
+    config.minfilesize = result["min-size"].as<long long>();
+    config.maxdepth = result["max-depth"].as<int>();
+    config.loadfile = result["load-file"].as<bool>();
+    config.verbose = result["verbose"].as<bool>();
+    config.inputfilestr = result["input"].as<string>();
+    config.noindex = result["no-index"].as<bool>();
+    config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
+    config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
+    config.includetypes = result["include-type"].as<std::vector<std::string>>();
+    config.ignorecase = result["case-insensitive"].as<bool>();
+    config.outputfilestr = result["output"].as<std::string>();
+    config.debugfilestr = result["debug"].as<std::string>();
+    config.debug.open(config.debugfilestr, std::ios::out);
+    if (result.count("help"))
+    {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
+    config.indexmap = new std::map<string, filedata>;
+    config.loadsrcmap = new std::map<string, filedata>;
+
+    return 1;
+}
+
 int main(int argc, char *argv[]) {
     struct configdata config;
 
@@ -35,6 +62,7 @@ int main(int argc, char *argv[]) {
         ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
         ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
         ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
+        ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
         ("t,include-type", "Include file extensions (iso,txt,pdf)", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3[?<level>])", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
@@ -64,7 +92,7 @@ int main(int argc, char *argv[]) {
                 if (!(config.out.is_open()))
                     config.out.open(config.outputfilestr, std::ios::out);
                 getDirectory(rootdir, 0, config);
-                cout << "Number of elements generated for (" << rootdir << ") : " << config.filemap->size() << endl;
+                cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
             }
         });
 
@@ -77,16 +105,16 @@ int main(int argc, char *argv[]) {
         config.out.close();
     }
 
-    config.filemap->clear();
+    config.indexmap->clear();
     if (config.loadfile)
     {
         cout << "Loading file " << config.inputfilestr << "..." << endl;
-        loadTree(config.filemap, config.inputfilestr);
-        cout << "Loaded file (" << config.filemap->size() << " items)" << endl;
+        loadTree(config.indexmap, config.inputfilestr, config);
+        cout << "Loaded file (" << config.indexmap->size() << " items)" << endl;
     }
 
-    config.filemap->clear();
-    delete (config.filemap);
-    config.filemap = nullptr;
+    config.indexmap->clear();
+    delete (config.indexmap);
+    config.indexmap = nullptr;
     return 0;
 }

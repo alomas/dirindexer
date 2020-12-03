@@ -34,11 +34,15 @@ string getMD5(const char *fullpath, struct configdata &config)
     stringstream oss;
     for(i = 0; i < MD5_DIGEST_LENGTH; i++)
     {
-        printf("%02x", checksum[i]);
+        // printf("%02x", checksum[i]);
         oss << std::right << setw(2) << std::setfill('0') << std::hex << (short)checksum[i];
         string thestring = oss.str();
     }
-    printf (" %s\n", fullpath);
+    // printf (" %s\n", fullpath);
+    if (config.verbose)
+    {
+        cout << oss.str() << " " << fullpath << endl;
+    }
     (config.debug) << oss.str() << " " << fullpath << endl;
     fclose (inFile);
     string md5;
@@ -220,7 +224,7 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
                                 )
                         {
                             fileobject.md5 = string(getMD5(fileobject.fullpath.c_str(), config));
-                            config.filemap->insert(std::make_pair(oss.str(), fileobject));
+                            config.indexmap->insert(std::make_pair(oss.str(), fileobject));
                             if (config.out.is_open())
                                 config.out << fileobject;
                         }
@@ -234,30 +238,6 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
 }
 
 
-int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config)
-{
-    config.maxfilesize = result["max-size"].as<long long>();
-    config.minfilesize = result["min-size"].as<long long>();
-    config.maxdepth = result["max-depth"].as<int>();
-    config.loadfile = result["load-file"].as<bool>();
-    config.inputfilestr = result["input"].as<string>();
-    config.noindex = result["no-index"].as<bool>();
-    config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
-    config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
-    config.includetypes = result["include-type"].as<std::vector<std::string>>();
-    config.ignorecase = result["case-insensitive"].as<bool>();
-    config.outputfilestr = result["output"].as<std::string>();
-    config.debugfilestr = result["debug"].as<std::string>();
-    config.debug.open(config.debugfilestr, std::ios::out);
-    if (result.count("help"))
-    {
-        std::cout << options.help() << std::endl;
-        exit(0);
-    }
-    config.filemap = new std::map<string, filedata>;
-
-    return 1;
-}
 
 long long getFileSize(const string& fullpath)
 {
@@ -272,7 +252,7 @@ long long getFileSize(const string& fullpath)
 }
 
 
-int loadTree(std::map<string, filedata>* filemap, const string& filename)
+int loadTree(std::map<string, filedata>* filemap, const string& filename, configdata &config)
 {
     filedata rec;
     string filesizestr;
@@ -287,8 +267,11 @@ int loadTree(std::map<string, filedata>* filemap, const string& filename)
            inputfile >> std::ws)
     {
         counter++;
-        if (counter % 1000 == 0)
-            cout << setfill('0') << setw(7) << counter << ".\t" << rec.fullpath << endl;
+        if (counter % 10000 == 0)
+        {
+            if (config.verbose)
+                cout << setfill('0') << setw(7) << counter << ".\t" << rec.fullpath << endl;
+        }
         if (!(filesizestr.empty()))
             rec.filesize = std::stoll(filesizestr);
         filemap->insert(std::make_pair(rec.fullpath, rec));
@@ -299,6 +282,34 @@ int loadTree(std::map<string, filedata>* filemap, const string& filename)
 
 }
 
+int loadTreebyMD5(std::map<string, filedata>* filemap, const string& filename, configdata &config)
+{
+    filedata rec;
+    string filesizestr;
+    long counter = 0;
+
+    std::ifstream inputfile(filename);
+
+    while (std::getline(inputfile, rec.md5, '|') &&
+           std::getline(inputfile, filesizestr, '|') &&
+           std::getline(inputfile, rec.filename, '|') &&
+           std::getline(inputfile, rec.fullpath, '|') &&
+           inputfile >> std::ws)
+    {
+        counter++;
+        if (counter % 10000 == 0)
+        {
+            //cout << setfill('0') << setw(7) << counter << ".\t" << rec.fullpath << endl;
+        }
+        if (!(filesizestr.empty()))
+            rec.filesize = std::stoll(filesizestr);
+        filemap->insert(std::make_pair(rec.md5, rec));
+    }
+
+    inputfile.close();
+    return 0;
+
+}
 
 bool extSkipFile(struct configdata &config, const std::string& str, bool skipfile, bool &alreadymatched, struct dirent* entry)
 {

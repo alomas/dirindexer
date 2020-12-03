@@ -36,6 +36,8 @@ struct filedata {
 
 struct configdata {
     std::fstream                debug;
+    std::fstream                matchfile;
+    std::fstream                nomatchfile;
     std::fstream                out; // Output file stream
     std::vector<std::string>    rootdirs;
     std::vector<std::string>    excludedirs;
@@ -44,18 +46,26 @@ struct configdata {
     long long                   maxfilesize = -1;
     long long                   minfilesize = -1;
     int                         maxdepth = -1;
-    std::map<std::string, filedata>* filemap = nullptr;
+    std::map<std::string, filedata>* indexmap = nullptr;
+    std::map<std::string, filedata>* loadsrcmap = nullptr;
+    std::map<std::string, filedata>* loaddstmap = nullptr;
     std::string                 inputfilestr;
+    std::string                 srcinputfilestr;
+    std::string                 dstinputfilestr;
+    std::string                 matchfilestr;
+    std::string                 nomatchfilestr;
+    bool                        usedstinputfile = false;
     bool                        loadfile = false;
     bool                        noindex = false;
     std::string                 outputfilestr;
     std::string                 debugfilestr;
+    bool                        verbose;
 };
 
 string getMD5(const char *fullpath, struct configdata &config);
-int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct configdata& config);
 long long getFileSize(const string& fullpath);
-int loadTree(std::map<string, filedata>* filemap, const string& filename);
+int loadTree(std::map<string, filedata>* filemap, const string& filename, configdata &config);
+int loadTreebyMD5(std::map<string, filedata>* filemap, const string& filename, configdata &config);
 int getDirectory(const char *rootdir, int depth, struct configdata &config);
 bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry);
 bool isFile(dirent* entry);
