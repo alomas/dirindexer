@@ -123,8 +123,8 @@ int main(int argc, char *argv[]) {
             filedata fileobject;
             if (config.usedstinputfile)
             {
-                cout << "Using dst-input file map" << endl;
-                indexmap = config.loaddstmap;
+                cout << "Using src-input file map" << endl;
+                indexmap = config.loadsrcmap;
             }
             else
             {
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
                 getDirectory(rootdir, 0, config);
                 cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
             }
-            loadmap = config.loadsrcmap;
+            loadmap = config.loaddstmap;
             // map<string, filedata> &item;
             //item = indexmap[1];
             std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &config, &missingfiles, &matchedfiles](std::pair<string,filedata> item)
