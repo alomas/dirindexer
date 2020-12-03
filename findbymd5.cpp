@@ -25,6 +25,8 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.verbose = result["verbose"].as<bool>();
     config.inputfilestr = result["input"].as<string>();
     config.srcinputfilestr = result["src-input"].as<string>();
+    config.matchfilestr = result["match-file"].as<string>();
+    config.nomatchfilestr = result["no-match-file"].as<string>();
     config.dstinputfilestr = result["dst-input"].as<string>();
     if (result.count("dst-input"))
     {
@@ -39,6 +41,8 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.outputfilestr = result["output"].as<std::string>();
     config.debugfilestr = result["debug"].as<std::string>();
     config.debug.open(config.debugfilestr, std::ios::out);
+    config.matchfile.open(config.matchfilestr, std::ios::out);
+    config.nomatchfile.open(config.nomatchfilestr, std::ios::out);
     if (result.count("help"))
     {
         std::cout << options.help() << std::endl;
@@ -70,6 +74,8 @@ int main(int argc, char *argv[]) {
             ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
             ("dst-input", "Destination Input filename (This contains your source-of-truth hashes you want to search)", cxxopts::value<std::string>()->default_value("./dst-input.txt"))
             ("src-input", "Source Input filename (This is list of hashes you want to find in the destination input file)", cxxopts::value<std::string>()->default_value("./src-input.txt"))
+            ("match-file", "Match files filename (This file will have the list of matched files)", cxxopts::value<std::string>()->default_value("./match.txt"))
+            ("no-match-file", "Missing files filename (This file will have the list of unmatched files)", cxxopts::value<std::string>()->default_value("./nomatch.txt"))
             ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
             ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
             ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
@@ -130,20 +136,23 @@ int main(int argc, char *argv[]) {
             loadmap = config.loadsrcmap;
             // map<string, filedata> &item;
             //item = indexmap[1];
-            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &missingfiles, &matchedfiles](std::pair<string,filedata> item)
+            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &config, &missingfiles, &matchedfiles](std::pair<string,filedata> item)
             {
                 //cout << item.second.md5 << ": " << item.second.fullpath << endl;
                 auto pairmd5 = loadmap->find(item.second.md5);
 
                 if (pairmd5 == loadmap->end())
                 {
-                    cout  << "Missing: " << item.second.fullpath << endl;
+                    cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
+                    (config.nomatchfile) << "Missing: " << item.second.md5 << " " << item.second.fullpath << endl;
                     missingfiles++;
                 }
                 else
                 {
                     cout  << "Match: " << item.second.fullpath <<
                     " is " << pairmd5->second.fullpath << endl;
+                    (config.matchfile) << "Match: " << item.second.md5 << " " << item.second.fullpath <<
+                                       " is " << pairmd5->second.fullpath << endl;
                     matchedfiles++;
                 }
             }
@@ -160,6 +169,16 @@ int main(int argc, char *argv[]) {
     {
         config.debug.close();
     }
+    if (config.matchfile.is_open())
+    {
+        config.matchfile.close();
+    }
+
+    if (config.nomatchfile.is_open())
+    {
+        config.nomatchfile.close();
+    }
+
     if (config.out.is_open())
     {
         config.out.close();
