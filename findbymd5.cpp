@@ -150,14 +150,20 @@ int main(int argc, char *argv[]) {
                 }
                 if (pairmd5 == loadmap->end())
                 {
-                    cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
+                    if (config.debug)
+                    {
+                        cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
+                    }
                     (config.nomatchfile) << "Missing: " << item.second.md5 << " " << item.second.fullpath << endl;
                     missingfiles++;
                 }
                 else
                 {
-                    cout  << "Match: " << item.second.fullpath <<
-                    " is " << pairmd5->second.fullpath << endl;
+                    if (config.debug)
+                    {
+                        cout << "Match: " << item.second.fullpath <<
+                             " is " << pairmd5->second.fullpath << endl;
+                    }
                     (config.matchfile) << "Match: " << item.second.md5 << " " << item.second.fullpath <<
                                        " is " << pairmd5->second.fullpath << endl;
                     matchedfiles++;
