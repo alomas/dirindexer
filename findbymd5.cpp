@@ -136,18 +136,11 @@ int main(int argc, char *argv[]) {
             loadmap = config.loaddstmap;
             // map<string, filedata> &item;
             //item = indexmap[1];
-            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &config, &missingfiles, &matchedfiles](std::pair<string,filedata> item)
+            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &config, &missingfiles, &matchedfiles](const std::pair<string,filedata>& item)
             {
                 //cout << item.second.md5 << ": " << item.second.fullpath << endl;
                 auto pairmd5 = loadmap->find(item.second.md5);
 
-                std::pair<std::multimap<std::string, filedata>::iterator,
-                    std::multimap<std::string, filedata>::iterator> md5map = loadmap->equal_range(item.second.md5);
-                for (std::multimap<std::string, filedata>::iterator it = md5map.first; it!=md5map.second; ++it)
-                {
-                    cout << "Found " << it->second.md5 << " " << it->second.fullpath;
-                    cout <<endl;
-                }
                 if (pairmd5 == loadmap->end())
                 {
                     if (config.debug)
@@ -169,30 +162,23 @@ int main(int argc, char *argv[]) {
                 }
             }
             );
-
-            auto pair = indexmap->find("./debug.log");
-
         }
     });
     cout << "Matched files: " << matchedfiles << endl;
     cout << "Missing files: " << missingfiles << endl;
 
-    if (config.debug.is_open())
-    {
+    if (config.debug.is_open()){
         config.debug.close();
     }
-    if (config.matchfile.is_open())
-    {
+    if (config.matchfile.is_open()){
         config.matchfile.close();
     }
 
-    if (config.nomatchfile.is_open())
-    {
+    if (config.nomatchfile.is_open()){
         config.nomatchfile.close();
     }
 
-    if (config.out.is_open())
-    {
+    if (config.out.is_open()){
         config.out.close();
     }
 
