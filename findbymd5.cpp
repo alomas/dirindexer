@@ -48,9 +48,9 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
         std::cout << options.help() << std::endl;
         exit(0);
     }
-    config.indexmap = new std::map<string, filedata>;
-    config.loadsrcmap = new std::map<string, filedata>;
-    config.loaddstmap = new std::map<string, filedata>;
+    config.indexmap = new std::multimap<string, filedata>;
+    config.loadsrcmap = new std::multimap<string, filedata>;
+    config.loaddstmap = new std::multimap<string, filedata>;
 
     return 1;
 }
@@ -118,13 +118,13 @@ int main(int argc, char *argv[]) {
         {
             if (!(config.out.is_open()))
                 config.out.open(config.outputfilestr, std::ios::out);
-            map<string, filedata> *indexmap;
-            map<string, filedata> *loadmap;
+            multimap<string, filedata> *indexmap;
+            multimap<string, filedata> *loadmap;
             filedata fileobject;
             if (config.usedstinputfile)
             {
-                cout << "Using dst-input file map" << endl;
-                indexmap = config.loaddstmap;
+                cout << "Using src-input file map" << endl;
+                indexmap = config.loadsrcmap;
             }
             else
             {
@@ -133,54 +133,52 @@ int main(int argc, char *argv[]) {
                 getDirectory(rootdir, 0, config);
                 cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
             }
-            loadmap = config.loadsrcmap;
+            loadmap = config.loaddstmap;
             // map<string, filedata> &item;
             //item = indexmap[1];
-            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &config, &missingfiles, &matchedfiles](std::pair<string,filedata> item)
+            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &config, &missingfiles, &matchedfiles](const std::pair<string,filedata>& item)
             {
                 //cout << item.second.md5 << ": " << item.second.fullpath << endl;
                 auto pairmd5 = loadmap->find(item.second.md5);
 
                 if (pairmd5 == loadmap->end())
                 {
-                    cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
-                    (config.nomatchfile) << "Missing: " << item.second.md5 << " " << item.second.fullpath << endl;
+                    if (config.debug)
+                    {
+                        cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
+                    }
+                    (config.nomatchfile) << item.second;
                     missingfiles++;
                 }
                 else
                 {
-                    cout  << "Match: " << item.second.fullpath <<
-                    " is " << pairmd5->second.fullpath << endl;
-                    (config.matchfile) << "Match: " << item.second.md5 << " " << item.second.fullpath <<
-                                       " is " << pairmd5->second.fullpath << endl;
+                    if (config.debug)
+                    {
+                        cout << "Match: " << item.second.fullpath <<
+                             " is " << pairmd5->second.fullpath << endl;
+                    }
+                    (config.matchfile) << item.second;
                     matchedfiles++;
                 }
             }
             );
-
-            auto pair = indexmap->find("./debug.log");
-
         }
     });
     cout << "Matched files: " << matchedfiles << endl;
     cout << "Missing files: " << missingfiles << endl;
 
-    if (config.debug.is_open())
-    {
+    if (config.debug.is_open()){
         config.debug.close();
     }
-    if (config.matchfile.is_open())
-    {
+    if (config.matchfile.is_open()){
         config.matchfile.close();
     }
 
-    if (config.nomatchfile.is_open())
-    {
+    if (config.nomatchfile.is_open()){
         config.nomatchfile.close();
     }
 
-    if (config.out.is_open())
-    {
+    if (config.out.is_open()){
         config.out.close();
     }
 

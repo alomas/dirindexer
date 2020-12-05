@@ -36,8 +36,8 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
         std::cout << options.help() << std::endl;
         exit(0);
     }
-    config.indexmap = new std::map<string, filedata>;
-    config.loadsrcmap = new std::map<string, filedata>;
+    config.indexmap = new std::multimap<string, filedata>;
+    config.loadsrcmap = new std::multimap<string, filedata>;
 
     return 1;
 }

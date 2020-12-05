@@ -46,9 +46,9 @@ struct configdata {
     long long                   maxfilesize = -1;
     long long                   minfilesize = -1;
     int                         maxdepth = -1;
-    std::map<std::string, filedata>* indexmap = nullptr;
-    std::map<std::string, filedata>* loadsrcmap = nullptr;
-    std::map<std::string, filedata>* loaddstmap = nullptr;
+    std::multimap<std::string, filedata>* indexmap = nullptr;
+    std::multimap<std::string, filedata>* loadsrcmap = nullptr;
+    std::multimap<std::string, filedata>* loaddstmap = nullptr;
     std::string                 inputfilestr;
     std::string                 srcinputfilestr;
     std::string                 dstinputfilestr;
@@ -64,9 +64,10 @@ struct configdata {
 
 string getMD5(const char *fullpath, struct configdata &config);
 long long getFileSize(const string& fullpath);
-int loadTree(std::map<string, filedata>* filemap, const string& filename, configdata &config);
-int loadTreebyMD5(std::map<string, filedata>* filemap, const string& filename, configdata &config);
+int loadTree(std::multimap<string, filedata>* filemap, const string& filename, configdata &config);
+int loadTreebyMD5(std::multimap<string, filedata>* filemap, const string& filename, configdata &config);
 int getDirectory(const char *rootdir, int depth, struct configdata &config);
 bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry);
 bool isFile(dirent* entry);
 bool extSkipFile(struct configdata &config, const std::string& str, bool skipfile, bool &alreadymatched, struct dirent* entry);
+std::ostream& operator << (std::ostream& os, const filedata& fileobject);
