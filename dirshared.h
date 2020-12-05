@@ -70,3 +70,4 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config);
 bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry);
 bool isFile(dirent* entry);
 bool extSkipFile(struct configdata &config, const std::string& str, bool skipfile, bool &alreadymatched, struct dirent* entry);
+std::ostream& operator << (std::ostream& os, const filedata& fileobject);

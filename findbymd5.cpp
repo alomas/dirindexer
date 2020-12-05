@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
                     {
                         cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
                     }
-                    (config.nomatchfile) << "Missing: " << item.second.md5 << " " << item.second.fullpath << endl;
+                    (config.nomatchfile) << item.second;
                     missingfiles++;
                 }
                 else
@@ -164,8 +164,7 @@ int main(int argc, char *argv[]) {
                         cout << "Match: " << item.second.fullpath <<
                              " is " << pairmd5->second.fullpath << endl;
                     }
-                    (config.matchfile) << "Match: " << item.second.md5 << " " << item.second.fullpath <<
-                                       " is " << pairmd5->second.fullpath << endl;
+                    (config.matchfile) << item.second;
                     matchedfiles++;
                 }
             }
