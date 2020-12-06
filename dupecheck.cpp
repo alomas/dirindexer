@@ -63,6 +63,8 @@ int main(int argc, char *argv[]) {
     struct configdata config;
     int matchedfiles = 0;
     int missingfiles = 0;
+    long long dupesize = 0;
+
 
     std::cout << "DupeCheck v0.01 alpha" << endl;
 
@@ -104,7 +106,7 @@ int main(int argc, char *argv[]) {
         cout << "Loaded file (" << config.loaddstmap->size() << " items)" << endl;
     }
 
-    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config, &missingfiles, &matchedfiles](string rootdiropt)
+    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config, &missingfiles, &dupesize, &matchedfiles](string rootdiropt)
     {
         cout << "Rootdir = " << rootdiropt << endl;
         if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
@@ -142,8 +144,10 @@ int main(int argc, char *argv[]) {
             //item = indexmap[1];
             while (!indexmap->empty()) {
                 auto node = indexmap->begin();
+                stringstream oss;
                 string nodemd5 = node->second.md5;
-                string filename = node->second.filename;
+                oss << node->second;
+                string fullpath = oss.str();
                 indexmap->erase(node);
                 bool first = true;
                 std::pair<std::multimap<std::string, filedata>::iterator,
@@ -158,18 +162,19 @@ int main(int argc, char *argv[]) {
                             ) {
                         if (first)
                         {
-                            cout << "Found dupe for " << nodemd5 << " " << filename << endl;
+                            (config.matchfile) << oss.str();
                             first = false;
                         }
-                        cout << "Found " << it->second.md5 << " " << it->second.fullpath;
+                        (config.matchfile) << it->second;
+                        dupesize += it->second.filesize;
+                        //indexmap->erase(it);
 
                         matchedfiles++;
-                        cout << endl;
                     }
                 }
+                indexmap->erase(nodemd5);
             }
             auto node2 = indexmap->begin();
-            cout << "test" << endl;
             std::for_each(indexmap->begin(), indexmap->end(), [loadmap, indexmap, &config, &missingfiles, &matchedfiles](const std::pair<string,filedata>& item)
                           {
                               //cout << item.second.md5 << ": " << item.second.fullpath << endl;
@@ -210,7 +215,15 @@ int main(int argc, char *argv[]) {
     });
     cout << "Matched files: " << matchedfiles << endl;
     cout << "Missing files: " << missingfiles << endl;
-
+    cout << "Dupe Size: ";
+    if ((dupesize > 1073741824))
+        cout << (dupesize / 1073741824) << "GB" << endl;
+    else
+        if ((dupesize > 1048576))
+            cout << (dupesize / 1048576) << "MB" << endl;
+        else
+            if ((dupesize > 1024))
+                cout << (dupesize / 1024) << "KB" << endl;
     if (config.debug.is_open()){
         config.debug.close();
     }
