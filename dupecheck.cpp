@@ -106,7 +106,9 @@ int main(int argc, char *argv[]) {
         cout << "Loaded file (" << config.loaddstmap->size() << " items)" << endl;
     }
 
-    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config, &missingfiles, &dupesize, &matchedfiles](string rootdiropt)
+    std::multimap<long long, filedata> *dupemap;
+    dupemap = new std::multimap<long long, filedata>;
+    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config, &missingfiles, dupemap, &dupesize, &matchedfiles](string rootdiropt)
     {
         cout << "Rootdir = " << rootdiropt << endl;
         if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
@@ -126,6 +128,9 @@ int main(int argc, char *argv[]) {
                 config.out.open(config.outputfilestr, std::ios::out);
             multimap<string, filedata> *indexmap;
             multimap<string, filedata> *loadmap;
+            std::multimap<long long, filedata> *dupemaplocal;
+
+            dupemaplocal = dupemap;
             filedata fileobject;
             if (config.usedstinputfile)
             {
@@ -167,6 +172,15 @@ int main(int argc, char *argv[]) {
                         }
                         (config.matchfile) << it->second;
                         dupesize += it->second.filesize;
+                        filedata object;
+                        object.filesize = it->second.filesize;
+                        object.filename = it->second.filename;
+                        object.md5 = it->second.md5;
+                        object.fullpath = it->second.fullpath;
+                        multimap<string, filedata> dupemap2;
+
+                        dupemap->insert(make_pair(object.filesize, object));
+                        dupemaplocal->insert(make_pair(object.filesize, object));
 
                         matchedfiles++;
                     }
