@@ -32,7 +32,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.matchfilestr = result["match-file"].as<string>();
     config.nomatchfilestr = result["no-match-file"].as<string>();
     config.dstinputfilestr = result["dst-input"].as<string>();
-    if (result.count("dst-input"))
+    if (result.count("src-input"))
     {
         std::cout << "Using dst-input file " << config.dstinputfilestr << " (not indexing local folder)" << endl;
         config.usedstinputfile = true;
@@ -167,7 +167,6 @@ int main(int argc, char *argv[]) {
                         }
                         (config.matchfile) << it->second;
                         dupesize += it->second.filesize;
-                        //indexmap->erase(it);
 
                         matchedfiles++;
                     }
@@ -185,30 +184,10 @@ int main(int argc, char *argv[]) {
                               for (std::multimap<std::string, filedata>::iterator it = md5map.first; it!=md5map.second; ++it)
                               {
 //                                  if ((it->second) == (item.second))
-                                  cout << "Found " << it->second.md5 << " " << it->second.fullpath;
-                                  cout <<endl;
-                              }
-                              /*
-                              if (pairmd5 == loadmap->end())
-                              {
                                   if (config.debug)
-                                  {
-                                      cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
-                                  }
-                                  (config.nomatchfile) << item.second;
-                                  missingfiles++;
+                                      cout << "Found " << it->second.md5 << " " << it->second.fullpath << endl;
                               }
-                              else
-                              {
-                                  if (config.debug)
-                                  {
-                                      cout << "Match: " << item.second.fullpath <<
-                                           " is " << pairmd5->second.fullpath << endl;
-                                  }
-                                  (config.matchfile) << item.second;
-                                  matchedfiles++;
-                              }
-                               */
+
                           }
             );
         }
