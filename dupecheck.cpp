@@ -31,7 +31,6 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.srcinputfilestr = result["src-input"].as<string>();
     config.matchfilestr = result["match-file"].as<string>();
     config.nomatchfilestr = result["no-match-file"].as<string>();
-    config.dstinputfilestr = result["dst-input"].as<string>();
     if (result.count("src-input"))
     {
         std::cout << "Using dst-input file " << config.dstinputfilestr << " (not indexing local folder)" << endl;
@@ -65,7 +64,6 @@ int main(int argc, char *argv[]) {
     int missingfiles = 0;
     long long dupesize = 0;
 
-
     std::cout << "DupeCheck v0.01 alpha" << endl;
 
     cxxopts::Options options("FindByMd5", "Find a file by md5 checksum.");
@@ -78,7 +76,6 @@ int main(int argc, char *argv[]) {
             ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
             ("c,case-insensitive", "Ignore case in exclude/include", cxxopts::value<bool>()->default_value("false"))
             ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
-            ("dst-input", "Destination Input filename (This contains your source-of-truth hashes you want to search)", cxxopts::value<std::string>()->default_value("./dst-input.txt"))
             ("src-input", "Source Input filename (This is list of hashes you want to find in the destination input file)", cxxopts::value<std::string>()->default_value("./src-input.txt"))
             ("match-file", "Match files filename (This file will have the list of matched files)", cxxopts::value<std::string>()->default_value("./match.txt"))
             ("no-match-file", "Missing files filename (This file will have the list of unmatched files)", cxxopts::value<std::string>()->default_value("./nomatch.txt"))
@@ -101,9 +98,6 @@ int main(int argc, char *argv[]) {
         cout << "Loading src file " << config.srcinputfilestr << "..." << endl;
         loadTreebyMD5(config.loadsrcmap, config.srcinputfilestr, config);
         cout << "Loaded file (" << config.loadsrcmap->size() << " items)" << endl;
-        cout << "Loading dst file " << config.dstinputfilestr << "..." << endl;
-        loadTreebyMD5(config.loaddstmap, config.dstinputfilestr, config);
-        cout << "Loaded file (" << config.loaddstmap->size() << " items)" << endl;
     }
 
     std::multimap<long long, filedata> *dupemap;
@@ -119,8 +113,6 @@ int main(int argc, char *argv[]) {
         rootdirstr = rootdiropt.c_str();
         char* rootdir;
         rootdir = (char*)rootdirstr;
-
-        cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
 
         if (!(config.noindex))
         {
@@ -145,20 +137,26 @@ int main(int argc, char *argv[]) {
                 cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
             }
             loadmap = config.loaddstmap;
-            // map<string, filedata> &item;
-            //item = indexmap[1];
             while (!indexmap->empty()) {
                 auto node = indexmap->begin();
                 stringstream oss;
                 string nodemd5 = node->second.md5;
                 oss << node->second;
                 string fullpath = oss.str();
-                indexmap->erase(node);
+                filedata object;
+                object.filesize = node->second.filesize;
+                object.filename = node->second.filename;
+                object.md5 = node->second.md5;
+                object.fullpath = node->second.fullpath;
                 bool first = true;
+                indexmap->erase(node);
+
                 std::pair<std::multimap<std::string, filedata>::iterator,
                         std::multimap<std::string, filedata>::iterator> md5map = indexmap->equal_range(nodemd5);
+
+                missingfiles++;
+
                 for (std::multimap<std::string, filedata>::iterator it = md5map.first; it != md5map.second; ++it) {
-//                                  if ((it->second) == (item.second))
 
                     if (
                             ((config.maxfilesize < 0) ||
@@ -167,37 +165,41 @@ int main(int argc, char *argv[]) {
                             ) {
                         if (first)
                         {
-                            (config.matchfile) << oss.str();
+                            //(config.matchfile) << oss.str();
+                            dupemap->insert(make_pair(object.filesize, object));
+                            missingfiles++;
                             first = false;
                         }
-                        (config.matchfile) << it->second;
-                        dupesize += it->second.filesize;
-                        filedata object;
-                        object.filesize = it->second.filesize;
-                        object.filename = it->second.filename;
-                        object.md5 = it->second.md5;
-                        object.fullpath = it->second.fullpath;
-                        multimap<string, filedata> dupemap2;
+                        //(config.matchfile) << it->second;
+                        {
+                            dupesize += it->second.filesize;
+                            object.filesize = it->second.filesize;
+                            object.filename = it->second.filename;
+                            object.md5 = it->second.md5;
+                            object.fullpath = it->second.fullpath;
+                            multimap<string, filedata> dupemap2;
 
-                        dupemap->insert(make_pair(object.filesize, object));
-                        dupemaplocal->insert(make_pair(object.filesize, object));
-
+                            dupemaplocal->insert(make_pair(object.filesize, object));
+                        }
                         matchedfiles++;
+                        missingfiles--;
+
                     }
                 }
                 indexmap->erase(nodemd5);
             }
-            auto node2 = indexmap->begin();
+            std::for_each(dupemap->rbegin(), dupemap->rend(), [&config] (const std::pair<long long, filedata>&item)
+            {
+                (config.matchfile) << item.second;
+            });
             std::for_each(indexmap->begin(), indexmap->end(), [loadmap, indexmap, &config, &missingfiles, &matchedfiles](const std::pair<string,filedata>& item)
                           {
-                              //cout << item.second.md5 << ": " << item.second.fullpath << endl;
                               auto pairmd5 = loadmap->find(item.second.md5);
 
                               std::pair<std::multimap<std::string, filedata>::iterator,
                                       std::multimap<std::string, filedata>::iterator> md5map = indexmap->equal_range(item.second.md5);
                               for (std::multimap<std::string, filedata>::iterator it = md5map.first; it!=md5map.second; ++it)
                               {
-//                                  if ((it->second) == (item.second))
                                   if (config.debug)
                                       cout << "Found " << it->second.md5 << " " << it->second.fullpath << endl;
                               }
@@ -206,9 +208,9 @@ int main(int argc, char *argv[]) {
             );
         }
     });
-    cout << "Matched files: " << matchedfiles << endl;
-    cout << "Missing files: " << missingfiles << endl;
-    cout << "Dupe Size: ";
+    cout << "Duplicate files: " << matchedfiles << endl;
+    cout << "Unique files: " << missingfiles << endl;
+    cout << "Duplicate Data Size: ";
     if ((dupesize > 1073741824))
         cout << (dupesize / 1073741824) << "GB" << endl;
     else
