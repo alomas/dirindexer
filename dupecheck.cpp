@@ -30,6 +30,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.inputfilestr = result["input"].as<string>();
     config.srcinputfilestr = result["src-input"].as<string>();
     config.matchfilestr = result["match-file"].as<string>();
+    config.sortedmatchfilestr = result["sorted-match-file"].as<string>();
     config.nomatchfilestr = result["no-match-file"].as<string>();
     if (result.count("src-input"))
     {
@@ -45,6 +46,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.debugfilestr = result["debug"].as<std::string>();
     config.debug.open(config.debugfilestr, std::ios::out);
     config.matchfile.open(config.matchfilestr, std::ios::out);
+    config.sortedmatchfile.open(config.sortedmatchfilestr, std::ios::out);
     config.nomatchfile.open(config.nomatchfilestr, std::ios::out);
     if (result.count("help"))
     {
@@ -78,6 +80,7 @@ int main(int argc, char *argv[]) {
             ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
             ("src-input", "Source Input filename (This is list of hashes you want to find in the destination input file)", cxxopts::value<std::string>()->default_value("./src-input.txt"))
             ("match-file", "Match files filename (This file will have the list of matched files)", cxxopts::value<std::string>()->default_value("./match.txt"))
+            ("sorted-match-file", "Match files filename (This file will have the list of matched files, sorted by size from greatest to least)", cxxopts::value<std::string>()->default_value("./sortedmatch.txt"))
             ("no-match-file", "Missing files filename (This file will have the list of unmatched files)", cxxopts::value<std::string>()->default_value("./nomatch.txt"))
             ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
             ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
@@ -165,12 +168,16 @@ int main(int argc, char *argv[]) {
                             ) {
                         if (first)
                         {
-                            //(config.matchfile) << oss.str();
+                            (config.matchfile) << oss.str();
+                            if (config.debug)
+                                cout << oss.str();
                             dupemap->insert(make_pair(object.filesize, object));
                             missingfiles++;
                             first = false;
                         }
-                        //(config.matchfile) << it->second;
+                        (config.matchfile) << it->second;
+                        if (config.debug)
+                            cout << it->second;
                         {
                             dupesize += it->second.filesize;
                             object.filesize = it->second.filesize;
@@ -190,7 +197,7 @@ int main(int argc, char *argv[]) {
             }
             std::for_each(dupemap->rbegin(), dupemap->rend(), [&config] (const std::pair<long long, filedata>&item)
             {
-                (config.matchfile) << item.second;
+                (config.sortedmatchfile) << item.second;
             });
             std::for_each(indexmap->begin(), indexmap->end(), [loadmap, indexmap, &config, &missingfiles, &matchedfiles](const std::pair<string,filedata>& item)
                           {
@@ -224,6 +231,9 @@ int main(int argc, char *argv[]) {
     }
     if (config.matchfile.is_open()){
         config.matchfile.close();
+    }
+    if (config.sortedmatchfile.is_open()){
+        config.sortedmatchfile.close();
     }
 
     if (config.nomatchfile.is_open()){
