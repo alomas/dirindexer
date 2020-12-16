@@ -38,6 +38,7 @@ struct configdata {
     std::fstream                debug;
     std::fstream                matchfile;
     std::fstream                nomatchfile;
+    std::fstream                sortedmatchfile;
     std::fstream                out; // Output file stream
     std::vector<std::string>    rootdirs;
     std::vector<std::string>    excludedirs;
@@ -54,6 +55,7 @@ struct configdata {
     std::string                 dstinputfilestr;
     std::string                 matchfilestr;
     std::string                 nomatchfilestr;
+    std::string                 sortedmatchfilestr;
     bool                        usedstinputfile = false;
     bool                        loadfile = false;
     bool                        noindex = false;
