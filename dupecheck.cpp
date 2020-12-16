@@ -66,9 +66,9 @@ int main(int argc, char *argv[]) {
     int missingfiles = 0;
     long long dupesize = 0;
 
-    std::cout << "DupeCheck v0.01 alpha" << endl;
+    std::cout << "DupeCheck v0.02 alpha" << endl;
 
-    cxxopts::Options options("FindByMd5", "Find a file by md5 checksum.");
+    cxxopts::Options options("Dupecheck", "Find duplicates within single index.");
     options.add_options()
             ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
             ("r,root-dirs", "Root Directory(ies)", cxxopts::value<std::vector<std::string>>()->default_value("."))
