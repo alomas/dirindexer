@@ -30,5 +30,7 @@ add_executable(dirindexer dirshared.cpp dirindexer.cpp dirshared.h)
 add_executable(dirupdate dirshared.cpp dirshared.h dirupdate.cpp)
 add_executable(findbymd5 dirshared.cpp dirshared.h findbymd5.cpp)
 add_executable(dupecheck dirshared.cpp dirshared.h dupecheck.cpp)
+add_executable(deleter dirshared.cpp dirshared.h deleter.cpp)
+add_executable(deleter dirshared.cpp dirshared.h deleter.cpp)
 
 
