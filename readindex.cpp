@@ -137,14 +137,27 @@ int main(int argc, char *argv[]) {
         }
 
     cout << "Total Data Size: ";
-    if ((dupesize > 1073741824))
-        cout << (dupesize / 1073741824) << "GB" << endl;
-    else
-    if ((dupesize > 1048576))
-        cout << (dupesize / 1048576) << "MB" << endl;
-    else
-    if ((dupesize > 1024))
-        cout << (dupesize / 1024) << "KB" << endl;
+        long long tb = 1073741824 * 1024;
+        if ((dupesize / 1024) > (1073741824))
+        {
+            long long gb = dupesize / 1073741824;
+
+            double tb = (double) ((double) gb / 1024);
+
+            std::cout << std::fixed;
+            std::cout << std::setprecision(2);
+            cout << tb << "TB" << endl;
+        }
+        else
+            if ((dupesize > 1073741824))
+                cout << (dupesize / 1073741824) << "GB" << endl;
+            else
+                if ((dupesize > 1048576))
+                    cout << (dupesize / 1048576) << "MB" << endl;
+                else
+                    if ((dupesize > 1024))
+                        cout << (dupesize / 1024) << "KB" << endl;
+
     if (config.debug.is_open()){
         config.debug.close();
     }
