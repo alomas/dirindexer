@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "ReadIndex v0.02 alpha" << endl;
 
-    cxxopts::Options options("Dupecheck", "Find duplicates within single index.");
+    cxxopts::Options options("ReadIndex", "Read index and generate filtered output.");
     options.add_options()
             ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
             ("r,root-dirs", "Root Directory(ies)", cxxopts::value<std::vector<std::string>>()->default_value("."))
@@ -127,15 +127,23 @@ int main(int argc, char *argv[]) {
                     )
             {
                 dupesize += object.filesize;
-                if (config.verbose)
-                {
-                    cout << object;
-                }
-                config.out << object;
+                pair<string, filedata> thepair = make_pair(object.fullpath, object);
+                loadmap->insert(thepair);
             }
             indexmap->erase(nodemd5);
         }
 
+        cout << "Number of files: " << loadmap->size() << endl;
+
+        std::for_each(loadmap->begin(), loadmap->end(), [loadmap, indexmap, &config](const std::pair<string,filedata>& item)
+        {
+            if (config.verbose)
+            {
+                cout << item.second;
+            }
+            config.out << item.second;
+        }
+    );
     cout << "Total Data Size: ";
         long long tb = 1073741824 * 1024;
         if ((dupesize / 1024) > (1073741824))
