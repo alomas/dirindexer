@@ -5,6 +5,7 @@
 #include "readindex.h"
 #include <iostream>
 #include <include/cxxopts.hpp>
+#include <iomanip>
 #if _WIN64 || _WIN32
 #include <include/dirent.h>
 #endif
