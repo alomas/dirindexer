@@ -1,6 +1,11 @@
-#include "findbymd5.h"
+//
+// Created by Adrian Lomas on 01/09/2021.
+//
+
+#include "readindex.h"
 #include <iostream>
 #include <include/cxxopts.hpp>
+#include <iomanip>
 #if _WIN64 || _WIN32
 #include <include/dirent.h>
 #endif
@@ -25,15 +30,13 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.verbose = result["verbose"].as<bool>();
     config.inputfilestr = result["input"].as<string>();
     config.srcinputfilestr = result["src-input"].as<string>();
-    config.matchfilestr = result["match-file"].as<string>();
-    config.nomatchfilestr = result["no-match-file"].as<string>();
-    config.dstinputfilestr = result["dst-input"].as<string>();
-    if (result.count("dst-input"))
+    if (result.count("src-input"))
     {
         std::cout << "Using dst-input file " << config.dstinputfilestr << " (not indexing local folder)" << endl;
         config.usesrcinputfile = true;
+        // Why would you specify a source file to load and then not load it?
+        config.loadfile = true;
     }
-    config.noindex = result["no-index"].as<bool>();
     config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
     config.rootdirs = result["root-dirs"].as<std::vector<std::string>>();
     config.includetypes = result["include-type"].as<std::vector<std::string>>();
@@ -41,8 +44,6 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.outputfilestr = result["output"].as<std::string>();
     config.debugfilestr = result["debug"].as<std::string>();
     config.debug.open(config.debugfilestr, std::ios::out);
-    config.matchfile.open(config.matchfilestr, std::ios::out);
-    config.nomatchfile.open(config.nomatchfilestr, std::ios::out);
     if (result.count("help"))
     {
         std::cout << options.help() << std::endl;
@@ -57,12 +58,11 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
 
 int main(int argc, char *argv[]) {
     struct configdata config;
-    int matchedfiles = 0;
-    int missingfiles = 0;
+    long long dupesize = 0;
 
-    std::cout << "FindByMd5 v0.01 alpha" << endl;
+    std::cout << "ReadIndex v0.02 alpha" << endl;
 
-    cxxopts::Options options("FindByMd5", "Find a file by md5 checksum.");
+    cxxopts::Options options("ReadIndex", "Read index and generate filtered output.");
     options.add_options()
             ("d,debug", "Enable debugging (file as parm)", cxxopts::value<std::string>()->default_value("./debug.log"))
             ("r,root-dirs", "Root Directory(ies)", cxxopts::value<std::vector<std::string>>()->default_value("."))
@@ -72,11 +72,7 @@ int main(int argc, char *argv[]) {
             ("o,output", "Output filename", cxxopts::value<std::string>()->default_value("./output.txt"))
             ("c,case-insensitive", "Ignore case in exclude/include", cxxopts::value<bool>()->default_value("false"))
             ("i,input", "Input filename", cxxopts::value<std::string>()->default_value("./input.txt"))
-            ("dst-input", "Destination Input filename (This contains your source-of-truth hashes you want to search)", cxxopts::value<std::string>()->default_value("./dst-input.txt"))
             ("src-input", "Source Input filename (This is list of hashes you want to find in the destination input file)", cxxopts::value<std::string>()->default_value("./src-input.txt"))
-            ("match-file", "Match files filename (This file will have the list of matched files)", cxxopts::value<std::string>()->default_value("./match.txt"))
-            ("no-match-file", "Missing files filename (This file will have the list of unmatched files)", cxxopts::value<std::string>()->default_value("./nomatch.txt"))
-            ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
             ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
             ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
             ("t,include-type", "Include file extensions (iso,txt,pdf)", cxxopts::value<std::vector<std::string>>()->default_value(""))
@@ -95,89 +91,85 @@ int main(int argc, char *argv[]) {
         cout << "Loading src file " << config.srcinputfilestr << "..." << endl;
         loadTreebyMD5(config.loadsrcmap, config.srcinputfilestr, config);
         cout << "Loaded file (" << config.loadsrcmap->size() << " items)" << endl;
-        cout << "Loading dst file " << config.dstinputfilestr << "..." << endl;
-        loadTreebyMD5(config.loaddstmap, config.dstinputfilestr, config);
-        cout << "Loaded file (" << config.loaddstmap->size() << " items)" << endl;
     }
 
-    std::for_each(config.rootdirs.begin(), config.rootdirs.end(), [&config, &missingfiles, &matchedfiles](string rootdiropt)
-    {
-        cout << "Rootdir = " << rootdiropt << endl;
-        if ((rootdiropt.length() > 3) && ((rootdiropt.back() == '/') || (rootdiropt.back() == '\\')))
-        {
-            rootdiropt.pop_back();
-        }
-        const char* rootdirstr;
-        rootdirstr = rootdiropt.c_str();
-        char* rootdir;
-        rootdir = (char*)rootdirstr;
+    std::multimap<long long, filedata> *dupemap;
+    dupemap = new std::multimap<long long, filedata>;
 
-        cout << "Rootdirstr = " << rootdirstr << ", rootdir = " << rootdir << endl;
+        if (!(config.out.is_open()))
+            config.out.open(config.outputfilestr, std::ios::out);
 
-        if (!(config.noindex))
-        {
-            if (!(config.out.is_open()))
-                config.out.open(config.outputfilestr, std::ios::out);
-            multimap<string, filedata> *indexmap;
-            multimap<string, filedata> *loadmap;
-            filedata fileobject;
-            if (config.usesrcinputfile)
+        multimap<string, filedata> *indexmap;
+        multimap<string, filedata> *loadmap;
+        std::multimap<long long, filedata> *dupemaplocal;
+
+        dupemaplocal = dupemap;
+        filedata fileobject;
+
+        indexmap = config.loadsrcmap;
+
+        loadmap = config.loaddstmap;
+        while (!indexmap->empty()) {
+            auto node = indexmap->begin();
+            stringstream oss;
+            string nodemd5 = node->second.md5;
+            oss << node->second;
+            string fullpath = oss.str();
+            filedata object;
+            object.filesize = node->second.filesize;
+            object.filename = node->second.filename;
+            object.md5 = node->second.md5;
+            object.fullpath = node->second.fullpath;
+
+            if (
+                    ((config.maxfilesize < 0) ||
+                    (config.maxfilesize > -1 && node->second.filesize < config.maxfilesize)) &&
+                    ((config.minfilesize < 0) || (config.minfilesize > -1 && node->second.filesize > config.minfilesize))
+                    )
             {
-                cout << "Using src-input file map" << endl;
-                indexmap = config.loadsrcmap;
+                dupesize += object.filesize;
+                pair<string, filedata> thepair = make_pair(object.fullpath, object);
+                loadmap->insert(thepair);
             }
+            indexmap->erase(nodemd5);
+        }
+
+        cout << "Number of files: " << loadmap->size() << endl;
+
+        std::for_each(loadmap->begin(), loadmap->end(), [loadmap, indexmap, &config](const std::pair<string,filedata>& item)
+        {
+            if (config.verbose)
+            {
+                cout << item.second;
+            }
+            config.out << item.second;
+        }
+    );
+    cout << "Total Data Size: ";
+        long long tb = 1073741824 * 1024;
+        if ((dupesize / 1024) > (1073741824))
+        {
+            long long gb = dupesize / 1073741824;
+
+            double tb = (double) ((double) gb / 1024);
+
+            std::cout << std::fixed;
+            std::cout << std::setprecision(2);
+            cout << tb << "TB" << endl;
+        }
+        else
+            if ((dupesize > 1073741824))
+                cout << (dupesize / 1073741824) << "GB" << endl;
             else
-            {
-                cout << "Using local dir index map" << endl;
-                indexmap = config.indexmap;
-                getDirectory(rootdir, 0, config);
-                cout << "Number of elements generated for (" << rootdir << ") : " << config.indexmap->size() << endl;
-            }
-            loadmap = config.loaddstmap;
-            // map<string, filedata> &item;
-            //item = indexmap[1];
-            std::for_each(indexmap->begin(), indexmap->end(), [loadmap, &config, &missingfiles, &matchedfiles](const std::pair<string,filedata>& item)
-            {
-                //cout << item.second.md5 << ": " << item.second.fullpath << endl;
-                auto pairmd5 = loadmap->find(item.second.md5);
-
-                if (pairmd5 == loadmap->end())
-                {
-                    if (config.debug)
-                    {
-                        cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
-                    }
-                    (config.nomatchfile) << item.second;
-                    missingfiles++;
-                }
+                if ((dupesize > 1048576))
+                    cout << (dupesize / 1048576) << "MB" << endl;
                 else
-                {
-                    if (config.debug)
-                    {
-                        cout << "Match: " << item.second.fullpath <<
-                             " is " << pairmd5->second.fullpath << endl;
-                    }
-                    (config.matchfile) << item.second;
-                    matchedfiles++;
-                }
-            }
-            );
-        }
-    });
-    cout << "Matched files: " << matchedfiles << endl;
-    cout << "Missing files: " << missingfiles << endl;
+                    if ((dupesize > 1024))
+                        cout << (dupesize / 1024) << "KB" << endl;
 
     if (config.debug.is_open()){
         config.debug.close();
     }
-    if (config.matchfile.is_open()){
-        config.matchfile.close();
-    }
-
-    if (config.nomatchfile.is_open()){
-        config.nomatchfile.close();
-    }
-
     if (config.out.is_open()){
         config.out.close();
     }

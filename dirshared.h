@@ -56,7 +56,7 @@ struct configdata {
     std::string                 matchfilestr;
     std::string                 nomatchfilestr;
     std::string                 sortedmatchfilestr;
-    bool                        usedstinputfile = false;
+    bool                        usesrcinputfile = false;
     bool                        loadfile = false;
     bool                        noindex = false;
     std::string                 outputfilestr;

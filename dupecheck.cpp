@@ -35,7 +35,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     if (result.count("src-input"))
     {
         std::cout << "Using dst-input file " << config.dstinputfilestr << " (not indexing local folder)" << endl;
-        config.usedstinputfile = true;
+        config.usesrcinputfile = true;
     }
     config.noindex = result["no-index"].as<bool>();
     config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 
             dupemaplocal = dupemap;
             filedata fileobject;
-            if (config.usedstinputfile)
+            if (config.usesrcinputfile)
             {
                 cout << "Using dst-input file map" << endl;
                 indexmap = config.loadsrcmap;
