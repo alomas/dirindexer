@@ -44,6 +44,8 @@ struct configdata {
     std::vector<std::string>    excludedirs;
     std::vector<std::string>    includetypes;
     bool                        ignorecase = false;
+    bool                        showfilename = false;
+    bool                        quotenames = true;
     long long                   maxfilesize = -1;
     long long                   minfilesize = -1;
     int                         maxdepth = -1;

@@ -22,6 +22,8 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.minfilesize = result["min-size"].as<long long>();
     config.maxdepth = result["max-depth"].as<int>();
     config.loadfile = result["load-file"].as<bool>();
+    config.showfilename = result["show-filename"].as<bool>();
+    config.quotenames = result["quote-filename"].as<bool>();
     config.verbose = result["verbose"].as<bool>();
     config.inputfilestr = result["input"].as<string>();
     config.srcinputfilestr = result["src-input"].as<string>();
@@ -77,6 +79,8 @@ int main(int argc, char *argv[]) {
             ("match-file", "Match files filename (This file will have the list of matched files)", cxxopts::value<std::string>()->default_value("./match.txt"))
             ("no-match-file", "Missing files filename (This file will have the list of unmatched files)", cxxopts::value<std::string>()->default_value("./nomatch.txt"))
             ("b,no-index", "Don't index, just read in existing index", cxxopts::value<bool>()->default_value("false"))
+            ("show-filename", "Only show destination filename in output (default is full path and useful for scripting)", cxxopts::value<bool>()->default_value("false"))
+            ("quote-filename", "Quote filenames (to help scripting)", cxxopts::value<bool>()->default_value("true"))
             ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
             ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
             ("t,include-type", "Include file extensions (iso,txt,pdf)", cxxopts::value<std::vector<std::string>>()->default_value(""))
@@ -145,7 +149,13 @@ int main(int argc, char *argv[]) {
                 {
                     if (config.debug)
                     {
-                        cout  << "Missing: " <<  item.second.md5 << " " << item.second.fullpath << endl;
+                        cout  << "Missing:\t" <<  item.second.md5 << " ";
+                        if (config.quotenames)
+                            cout << "\"";
+                        cout << item.second.fullpath;
+                        if (config.quotenames)
+                            cout << "\"";
+                        cout << endl;
                     }
                     (config.nomatchfile) << item.second;
                     missingfiles++;
@@ -154,8 +164,22 @@ int main(int argc, char *argv[]) {
                 {
                     if (config.debug)
                     {
-                        cout << "Match: " << item.second.fullpath <<
-                             " is " << pairmd5->second.fullpath << endl;
+                        cout << "Match:\t"  << item.second.md5 << " ";
+                        if (config.quotenames)
+                            cout << "\"";
+                        cout << item.second.fullpath;
+                        if (config.quotenames)
+                            cout << "\"";
+                        cout <<  " | ";
+                        if (config.quotenames)
+                            cout << "\"";
+                        if (config.showfilename)
+                            cout << pairmd5->second.filename;
+                        else
+                            cout << pairmd5->second.fullpath;
+                        if (config.quotenames)
+                            cout << "\"";
+                        cout << endl;
                     }
                     (config.matchfile) << item.second;
                     matchedfiles++;
