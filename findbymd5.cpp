@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
                 {
                     if (config.debug)
                     {
-                        cout  << "Missing:\t" <<  item.second.md5 << " ";
+                        cout  << "Missed:\t" <<  item.second.md5 << " ";
                         if (config.quotenames)
                             cout << "\"";
                         cout << item.second.fullpath;
