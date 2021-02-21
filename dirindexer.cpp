@@ -25,6 +25,7 @@ int loadConfig(cxxopts::Options &options, cxxopts::ParseResult& result, struct c
     config.maxdepth = result["max-depth"].as<int>();
     config.loadfile = result["load-file"].as<bool>();
     config.verbose = result["verbose"].as<bool>();
+    config.usestat = result["stat"].as<bool>();
     config.inputfilestr = result["input"].as<string>();
     config.noindex = result["no-index"].as<bool>();
     config.excludedirs = result["exclude-dir"].as<std::vector<std::string>>();
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
         ("l,load-file", "read existing index", cxxopts::value<bool>()->default_value("false"))
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
         ("t,include-type", "Include file extensions (iso,txt,pdf)", cxxopts::value<std::vector<std::string>>()->default_value(""))
+        ("stat", "Use stat() functions for file type info (necessary for XFS)", cxxopts::value<bool>()->default_value("false"))
         ("e, exclude-dir", "Exclude directories (dir1,dir2,dir3[?<level>])", cxxopts::value<std::vector<std::string>>()->default_value(""))
         ("h,help", "Help", cxxopts::value<bool>()->default_value("false"))
         ;

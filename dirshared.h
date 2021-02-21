@@ -63,6 +63,7 @@ struct configdata {
     bool                        noindex = false;
     std::string                 outputfilestr;
     std::string                 debugfilestr;
+    bool                        usestat = false;
     bool                        verbose;
 };
 
@@ -72,6 +73,7 @@ int loadTree(std::multimap<string, filedata>* filemap, const string& filename, c
 int loadTreebyMD5(std::multimap<string, filedata>* filemap, const string& filename, configdata &config);
 int getDirectory(const char *rootdir, int depth, struct configdata &config);
 bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry);
-bool isFile(dirent* entry);
+bool isFile(dirent* entry, struct filedata* fileobject, struct configdata &config);
+bool isDir(dirent* entry, struct filedata* fileobject, struct configdata &config);
 bool extSkipFile(struct configdata &config, const std::string& str, bool skipfile, bool &alreadymatched, struct dirent* entry);
 std::ostream& operator << (std::ostream& os, const filedata& fileobject);

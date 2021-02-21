@@ -84,8 +84,24 @@ std::istream& operator >> (std::stringstream& os, filedata& fileobject)
     return os;
 }
 
-bool isFile(dirent* entry)
+bool isFile(dirent* entry, filedata &fileobject, struct configdata &config)
 {
+    if (config.usestat)
+    {
+        // cout << "Using stat() for file type" << endl;
+        struct stat filestat{};
+        int result;
+
+        ostringstream oss;
+        oss << fileobject.fullpath << "/" << fileobject.filename;
+        result = stat(oss.str().c_str(), &filestat);
+        result = S_ISREG(filestat.st_mode);
+        // cout << result << endl;
+        if (result)
+            return true;
+        else
+            return false;
+    }
 #if _WIN64 || _WIN32
     if ( (entry->d_type & DT_REG) == DT_REG)
         return true;
@@ -103,6 +119,30 @@ bool isFile(dirent* entry)
         return false;
     }
 #endif
+}
+
+bool isDir(dirent* entry, filedata &fileobject, struct configdata &config)
+{
+    if (config.usestat)
+    {
+        // cout << "Using stat() for file type" << endl;
+        struct stat filestat{};
+        int result;
+
+        ostringstream oss;
+        oss << fileobject.fullpath << "/" << fileobject.filename;
+        result = stat(oss.str().c_str(), &filestat);
+        result = S_ISDIR(filestat.st_mode);
+        // cout << result << endl;
+        if (result)
+            return true;
+        else
+            return false;
+    }
+    if ( (entry->d_type & DT_DIR) == DT_DIR)
+        return true;
+    else
+        return false;
 }
 bool depthSkipDir(const std::string& str, bool skipdir, int depth, struct dirent* entry)
 {
@@ -159,7 +199,8 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
             fileobject.fullpath = rootdir;
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
             {
-                if ((entry->d_type & DT_DIR) == DT_DIR)
+                //if ((entry->d_type & DT_DIR) == DT_DIR)
+                if (isDir(entry, fileobject, config))
                 {
                     ostringstream oss;
 
@@ -189,7 +230,7 @@ int getDirectory(const char *rootdir, int depth, struct configdata &config)
                     }
                 }
                 else
-                if (isFile(entry))
+                if (isFile(entry, fileobject, config))
                 {
                     bool skipfile;
                     if (config.includetypes.empty())
