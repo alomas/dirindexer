@@ -88,16 +88,15 @@ bool isFile(dirent* entry, filedata &fileobject, struct configdata &config)
 {
     if (config.usestat)
     {
-        // cout << "Using stat() for file type" << endl;
         struct stat filestat{};
         int result;
 
         ostringstream oss;
         oss << fileobject.fullpath << "/" << fileobject.filename;
         result = stat(oss.str().c_str(), &filestat);
-        result = S_ISREG(filestat.st_mode);
-        // cout << result << endl;
-        if (result)
+        int isfile = S_ISREG(filestat.st_mode);
+        int islink = (S_ISLNK(filestat.st_mode));
+        if ((isfile > 0) && (islink == 0))
             return true;
         else
             return false;
@@ -125,7 +124,6 @@ bool isDir(dirent* entry, filedata &fileobject, struct configdata &config)
 {
     if (config.usestat)
     {
-        // cout << "Using stat() for file type" << endl;
         struct stat filestat{};
         int result;
 
@@ -133,8 +131,11 @@ bool isDir(dirent* entry, filedata &fileobject, struct configdata &config)
         oss << fileobject.fullpath << "/" << fileobject.filename;
         result = stat(oss.str().c_str(), &filestat);
         result = S_ISDIR(filestat.st_mode);
-        // cout << result << endl;
-        if (result)
+        int isdir = S_ISDIR(filestat.st_mode);
+        int islink = (S_ISLNK(filestat.st_mode));
+        // This does not work on mac.  So rework it.
+
+        if ((isdir > 0) && (islink == 0))
             return true;
         else
             return false;
