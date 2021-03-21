@@ -21,7 +21,7 @@ if (UNIX)
 endif (UNIX)
 
 if (UNIX)
-	include_directories($ENV{srcdir}/openssl/include/ $ENV{libs}/cxxopts/)
+	include_directories($ENV{srcdir}/openssl/include/ $ENV{libs}/cxxopts/ $ENV{libs}/exifreader/)
 	link_directories($ENV{srcdir}/openssl/)
 	link_libraries(crypto)
 endif (UNIX)
@@ -31,5 +31,6 @@ add_executable(dirupdate dirshared.cpp dirshared.h dirupdate.cpp)
 add_executable(findbymd5 dirshared.cpp dirshared.h findbymd5.cpp)
 add_executable(dupecheck dirshared.cpp dirshared.h dupecheck.cpp)
 add_executable(readindex dirshared.cpp dirshared.h readindex.cpp)
+add_executable(exifindexer dirshared.cpp dirshared.h exifindexer.cpp $ENV{libs}/exifreader/ImageFile.cpp $ENV{libs}/exifreader/ExifReader.cpp $ENV{libs}/exifreader/ExifIFD.cpp $ENV{libs}/exifreader/ExifIFDList.cpp $ENV{libs}/exifreader/ExifTagMap.cpp)
 
 

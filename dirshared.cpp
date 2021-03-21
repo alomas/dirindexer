@@ -14,6 +14,33 @@
 
 using namespace std;
 
+
+string getMD5FromString(const char *body, int length, configdata &config) {
+    MD5_CTX mdContext;
+    size_t bytes;
+    unsigned char data[8192];
+    int i;
+    unsigned char checksum[MD5_DIGEST_LENGTH];
+
+    MD5_Init (&mdContext);
+    //while ((bytes = fread (data, 1, 8192, inFile)) != 0)
+        MD5_Update (&mdContext, body, length);
+    MD5_Final (checksum,&mdContext);
+    stringstream oss;
+    for(i = 0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        // printf("%02x", checksum[i]);
+        oss << std::right << setw(2) << std::setfill('0') << std::hex << (short)checksum[i];
+        string thestring = oss.str();
+    }
+    // printf (" %s\n", fullpath);
+
+
+    string md5;
+    md5 = oss.str();
+    return md5;
+}
+
 string getMD5(const char *fullpath, struct configdata &config)
 {
     MD5_CTX mdContext;

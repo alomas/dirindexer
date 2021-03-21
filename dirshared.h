@@ -40,6 +40,7 @@ struct configdata {
     std::fstream                nomatchfile;
     std::fstream                sortedmatchfile;
     std::fstream                out; // Output file stream
+    std::fstream                exif;
     std::vector<std::string>    rootdirs;
     std::vector<std::string>    excludedirs;
     std::vector<std::string>    includetypes;
@@ -68,6 +69,7 @@ struct configdata {
 };
 
 string getMD5(const char *fullpath, struct configdata &config);
+string getMD5FromString(const char *body, int length, struct configdata &config);
 long long getFileSize(const string& fullpath);
 int loadTree(std::multimap<string, filedata>* filemap, const string& filename, configdata &config);
 int loadTreebyMD5(std::multimap<string, filedata>* filemap, const string& filename, configdata &config);

@@ -1,0 +1,8 @@
+//
+// Created by Adrian Lomas on 3/20/21.
+//
+
+#ifndef DIRINDEXER_EXIFINDEXER_H
+#define DIRINDEXER_EXIFINDEXER_H
+
+#endif //DIRINDEXER_EXIFINDEXER_H
