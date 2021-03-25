@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     {
         //if (config.verbose)
         {
-            // cout << item.second;
+             cout << item.second.fullpath <<endl;
 
             string extension,includeextupper;
             string filename = item.second.fullpath;
@@ -118,61 +118,72 @@ int main(int argc, char *argv[]) {
                            [](unsigned char c) { return std::toupper(c); });
             std::transform(includeextupper.begin(), includeextupper.end(), includeextupper.begin(),
                            [](unsigned char c) { return std::toupper(c); });
-            if (fileextupper == "JPG")
-            {
+            if (fileextupper == "JPG") {
                 ImageFile *image;
                 image = new ImageFile();
+                // image->setDebugflag(true);
                 image->setFilename(filename);
                 image->openFile();
                 image->findSOI();
-                image->getNextChunk();
-                char *exifbody = image->getExifBody();
-                ExifReader *reader;
-                reader = new ExifReader();
-                if ((reader->setExifbody(exifbody, image->getExiflength(), filename) == -1))
+                auto chunkmap = image->getNextChunk();
+                if (chunkmap.size() > 0)
                 {
-                    delete image;
+                    char *exifbody = image->getExifBody();
+                    ExifReader *reader;
+                    reader = new ExifReader();
+
+                    if ((reader->setExifbody(exifbody, image->getExiflength(), filename) == -1)) {
+                        delete image;
+                        delete reader;
+                        return 1;
+                    }
+                    map<int, string> tagresult;
+                    map<int, string> tagquery = {
+                            {0x10f,  "No Make"},
+                            {0x110,  "No Model"},
+                            {0x131,  "No Software"},
+                            {0x132,  "No DateTime"},
+                            {0x9003, "No OrigTime"},
+                            {0xa002, "No Width"},
+                            {0xa003, "No Length"},
+                            {0xa401, "No HDR"},
+                            {0x9203, "No Bright"},
+                            {0x0006, "No GPSAlt"},
+                            {0x9202, "No Aperture"},
+                            {0x9214, "No Subject"},
+                            {0x829a, "No Exposure Time"},
+                            {0x9291, "No SubSecTimeOrig"},
+                            {0xa433, "No LenMake"},
+                            {0xa434, "No LensModel"}
+                    };
+                    tagresult = reader->getTags(tagquery);
+                    reader->printTags();
+
+                    string md5;
+                    stringstream oss2, exifoss;
+                    for (auto it = tagresult.begin(); it != tagresult.end(); it++) {
+                        exifoss << it->second << "|";
+                    }
+                    md5 = getMD5FromString(exifoss.str().c_str(), exifoss.str().length(), config);
+
+                    oss2 << md5 << "|";
+                    oss2 << image->getExiflength() << "|";
+
+                    oss2 << item.second.filename << "|";
+                    oss2 << filename << "|";
+
+
+                    oss2 << exifoss.str();
+                    if (image->isJFIF())
+                        oss2 << "JFIF|";
+                    else if (image->isJPG())
+                        oss2 << "JPG|";
+                    else
+                        oss2 << "UNK|";
+
+                    (config.exif) << oss2.str() << endl;
                     delete reader;
-                    return 1;
-                }
-                map<int,string> tagresult;
-                map<int,string> tagquery = {
-                        {0x10f, "No Make"},
-                        {0x110, "No Model"},
-                        {0x131, "No Software"},
-                        {0x132, "No DateTime"},
-                        {0xa002, "No Width"},
-                        {0xa003, "No Length"},
-                        {0xa401, "No HDR"},
-                        {0x9203, "No Bright"}
-                };
-                tagresult = reader->getTags(tagquery);
-
-                string md5;
-                stringstream oss2, exifoss;
-                for (auto it=tagresult.begin(); it!=tagresult.end(); it++)
-                {
-                    exifoss << it->second << "|";
-                }
-                md5 = getMD5FromString(exifoss.str().c_str(), exifoss.str().length(), config);
-
-                oss2 << md5 << "|";
-                oss2 << image->getExiflength() << "|";
-
-                oss2 << item.second.filename << "|";
-                oss2 << filename << "|" ;
-
-
-                oss2 << exifoss.str();
-                if (image->isJFIF())
-                    oss2 << "JFIF|";
-                else if (image->isJPG())
-                    oss2 << "JPG|";
-                else
-                    oss2 << "UNK|";
-
-                (config.exif) << oss2.str() << endl;
-                delete reader;
+            }
                 delete image;
             }
             if (fileextupper == "HEIC")
@@ -192,18 +203,28 @@ int main(int argc, char *argv[]) {
                 reader = new ExifReader();
                 reader->setExifbody(exifdata, image->getHeicExifSize(), filename);
                 //reader->printTags();
+                //reader->printTags();
                 map<int,string> tagresult;
                 map<int,string> tagquery = {
-                        {0x10f, "No Make"},
-                        {0x110, "No Model"},
-                        {0x131, "No Software"},
-                        {0x132, "No DateTime"},
+                        {0x10f,  "No Make"},
+                        {0x110,  "No Model"},
+                        {0x131,  "No Software"},
+                        {0x132,  "No DateTime"},
+                        {0x9003, "No OrigTime"},
                         {0xa002, "No Width"},
                         {0xa003, "No Length"},
                         {0xa401, "No HDR"},
-                        {0x9203, "No Bright"}
+                        {0x9203, "No Bright"},
+                        {0x0006, "No GPSAlt"},
+                        {0x9202, "No Aperture"},
+                        {0x9214, "No Subject"},
+                        {0x829a, "No Exposure Time"},
+                        {0x9291, "No SubSecTimeOrig"},
+                        {0xa433, "No LenMake"},
+                        {0xa434, "No LensModel"}
                 };
                 tagresult = reader->getTags(tagquery);
+                reader->printTags();
                 string md5;
                 stringstream oss2, exifoss;
                 for (auto it=tagresult.begin(); it!=tagresult.end(); it++)
@@ -261,5 +282,6 @@ int main(int argc, char *argv[]) {
     delete (config.indexmap);
     config.exif.close();
     config.indexmap = nullptr;
+    cout << "Done..." << endl;
     return 0;
 }
